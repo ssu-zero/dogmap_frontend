@@ -1,22 +1,12 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import type { Metadata } from "next"
 
 import "@workspace/ui/globals.css"
 import { QueryProvider } from "@/components/query-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 
-const fontSans = Geist({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
-
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
-
-export const metadata = {
-  title: "Dogmap",
-  description: "반려견과 함께하는 장소를 찾는 지도 서비스",
+export const metadata: Metadata = {
+  title: "개동여지도",
+  description: "반려동물과 떠나는 맞춤 여행 코스",
 }
 
 export default function RootLayout({
@@ -25,11 +15,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="ko"
-      suppressHydrationWarning
-      className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased`}
-    >
+    <html lang="ko" suppressHydrationWarning>
       <body>
         <ThemeProvider>
           <QueryProvider>{children}</QueryProvider>

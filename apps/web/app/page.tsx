@@ -2,16 +2,18 @@ import { Button } from "@workspace/ui/components/button"
 
 export default function Page() {
   return (
-    <main className="flex min-h-svh items-center justify-center p-6">
-      <section className="flex max-w-md flex-col items-center gap-4 text-center">
+    <main className="layout-mobile flex min-h-svh items-center justify-center bg-gray-50">
+      <section className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
         <span className="text-5xl" aria-hidden>
           🐕
         </span>
-        <h1 className="text-3xl font-semibold tracking-tight">Dogmap</h1>
-        <p className="text-neutral-600 dark:text-neutral-400">
-          반려견과 함께할 수 있는 장소를 한눈에 찾아보세요.
+        <h1 className="type-head-sb-24 text-gray-900">개동여지도</h1>
+        <p className="type-body-r-14 text-gray-400">
+          반려동물과 떠나는 맞춤 여행 코스
         </p>
-        <Button>시작하기</Button>
+        <Button size="lg" className="mt-4 w-full">
+          시작하기
+        </Button>
       </section>
     </main>
   )
