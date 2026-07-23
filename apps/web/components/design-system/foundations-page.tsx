@@ -46,10 +46,12 @@ function Swatch({
   name,
   value,
   image,
+  eager = false,
 }: {
   name: string
   value: string
   image?: string
+  eager?: boolean
 }) {
   return (
     <div className="flex w-40 shrink-0 flex-col gap-4">
@@ -63,6 +65,7 @@ function Swatch({
             alt=""
             fill
             sizes="160px"
+            loading={eager ? "eager" : "lazy"}
             className="object-fill"
           />
         ) : null}
@@ -87,11 +90,13 @@ function ColorSystem() {
               name="Black"
               value={colors.system.black}
               image="swatch-black.svg"
+              eager
             />
             <Swatch
               name="White"
               value={colors.system.white}
               image="swatch-white.svg"
+              eager
             />
           </div>
         </div>
