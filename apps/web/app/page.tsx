@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { Button } from "@workspace/ui/components/button"
 
 export default function Page() {
@@ -11,7 +13,13 @@ export default function Page() {
         <p className="type-body-r-14 text-gray-400">
           반려동물과 떠나는 맞춤 여행 코스
         </p>
-        <Button size="lg" className="mt-4 w-full">
+        <Link
+          href="/design-system"
+          className="type-body-sb-16 mt-4 flex h-16 w-full items-center justify-center rounded-lg bg-red-600 px-6 text-white transition-colors hover:bg-red-700 active:bg-red-800"
+        >
+          디자인 시스템 보기
+        </Link>
+        <Button variant="secondary" className="w-full">
           시작하기
         </Button>
       </section>
