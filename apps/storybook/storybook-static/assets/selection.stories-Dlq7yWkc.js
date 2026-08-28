@@ -1,0 +1,15 @@
+import{j as e}from"./iframe-C_jTJyXZ.js";import{c as p}from"./index-CobTJpls.js";import{I as u}from"./icon-SEYnds16.js";import{c as r}from"./utils-DCADjnpI.js";import"./preload-helper-PPVm8Dsz.js";const m=p("inline-flex flex-col items-center justify-center gap-1 rounded-xl transition-colors",{variants:{state:{default:"bg-gray-50 text-gray-700",selected:"border border-gray-900 bg-gray-50 text-gray-900",disabled:"bg-gray-50 text-gray-700 opacity-40"}},defaultVariants:{state:"default"}});function i({state:t,description:n,className:s,children:a,...x}){return e.jsxs("button",{className:r(m({state:t}),"min-h-18 min-w-[109px] px-3 py-2",s),type:"button",disabled:t==="disabled",...x,children:[a,n?e.jsx("span",{className:"type-caption-r-12",children:n}):null]})}function l({checked:t=!1,children:n,className:s,...a}){return e.jsxs("button",{className:r("type-body-r-16 flex w-full items-center justify-between rounded-[4px] bg-gray-50 p-3 text-left",s),type:"button","aria-pressed":t,...a,children:[e.jsx(u,{name:"checkLine",className:r("size-6",t&&"opacity-100")}),e.jsx("span",{className:"flex-1",children:n}),e.jsx("span",{className:"px-3 text-red-600",children:"보기"})]})}function c({mode:t="solo",className:n,children:s,...a}){return e.jsx("button",{type:"button",className:r("type-body-r-16 inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2",t==="solo"?"bg-gray-600 text-gray-100 shadow-[0_0_5px_rgba(91,91,91,.4)]":"bg-gray-50 text-gray-500 shadow-[0_0_5px_rgba(201,198,198,.6)]",n),...a,children:s})}function d({pressed:t=!1,className:n,...s}){return e.jsx("button",{type:"button","aria-pressed":t,className:r("inline-flex size-[54px] items-center justify-center rounded-full border border-gray-150 bg-gray-50",t&&"border-gray-100",n),...s,children:e.jsx(u,{name:"pawFill",className:"size-7"})})}const j={title:"Components/Selection",component:i,parameters:{layout:"centered"}},o={render:()=>e.jsxs("div",{className:"flex w-[335px] flex-wrap gap-3",children:[e.jsx(i,{state:"disabled",children:"소형견"}),e.jsx(i,{state:"default",children:"중형견"}),e.jsx(i,{state:"selected",children:"대형견"}),e.jsxs("div",{className:"w-full",children:[e.jsx(l,{children:"서비스 이용약관에 동의합니다"}),e.jsx(l,{checked:!0,children:"서비스 이용약관에 동의합니다"})]}),e.jsx(c,{mode:"solo",children:"현재 위치"}),e.jsx(c,{mode:"multi",children:"코스 추가"}),e.jsx(d,{}),e.jsx(d,{pressed:!0})]})};o.parameters={...o.parameters,docs:{...o.parameters?.docs,source:{originalSource:`{
+  render: () => <div className="flex w-[335px] flex-wrap gap-3">
+      <ChoiceButton state="disabled">소형견</ChoiceButton>
+      <ChoiceButton state="default">중형견</ChoiceButton>
+      <ChoiceButton state="selected">대형견</ChoiceButton>
+      <div className="w-full">
+        <AgreeButton>서비스 이용약관에 동의합니다</AgreeButton>
+        <AgreeButton checked>서비스 이용약관에 동의합니다</AgreeButton>
+      </div>
+      <FloatingAction mode="solo">현재 위치</FloatingAction>
+      <FloatingAction mode="multi">코스 추가</FloatingAction>
+      <LikeButton />
+      <LikeButton pressed />
+    </div>
+}`,...o.parameters?.docs?.source}}};const B=["Variants"];export{o as Variants,B as __namedExportsOrder,j as default};

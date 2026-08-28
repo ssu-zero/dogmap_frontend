@@ -1,0 +1,6 @@
+import{j as e}from"./iframe-C_jTJyXZ.js";import{I as l}from"./icon-SEYnds16.js";import{c as n}from"./utils-DCADjnpI.js";import"./preload-helper-PPVm8Dsz.js";function c({title:a,onBack:s,trailing:t,className:i,...o}){return e.jsxs("header",{className:n("flex h-14 items-center justify-between px-5",i),...o,children:[e.jsxs("div",{className:"flex min-w-0 items-center gap-3",children:[s?e.jsx("button",{type:"button",onClick:s,"aria-label":"뒤로 가기",children:e.jsx(l,{name:"arrowLeft",className:"size-6"})}):null,a?e.jsx("h1",{className:"type-head-sb-18 truncate",children:a}):null]}),t]})}function d({children:a,className:s,...t}){return e.jsx("h2",{className:n("type-head-sb-24 text-gray-800",s),...t,children:a})}const h={title:"Components/Header",component:c,parameters:{layout:"centered"}},r={render:()=>e.jsxs("div",{className:"w-[375px] space-y-8",children:[e.jsx(c,{title:"코스 상세",onBack:()=>{}}),e.jsx(d,{children:"반려견과 갈 곳"})]})};r.parameters={...r.parameters,docs:{...r.parameters?.docs,source:{originalSource:`{
+  render: () => <div className="w-[375px] space-y-8">
+      <Header title="코스 상세" onBack={() => undefined} />
+      <PageTitle>반려견과 갈 곳</PageTitle>
+    </div>
+}`,...r.parameters?.docs?.source}}};const j=["Variants"];export{r as Variants,j as __namedExportsOrder,h as default};
