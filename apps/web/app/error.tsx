@@ -1,5 +1,6 @@
 "use client"
 import { Button } from "@workspace/ui/components/button"
+import Link from "next/link"
 import { useEffect } from "react"
 
 export default function Error({
@@ -18,7 +19,17 @@ export default function Error({
       <p className="type-body-r-14 text-gray-400">
         잠시 후 다시 시도해 주세요.
       </p>
-      <Button onClick={reset}>다시 시도</Button>
+      <div className="flex gap-2">
+        <Button variant="secondary" onClick={reset}>
+          다시 시도
+        </Button>
+        <Link
+          href="/"
+          className="type-body-sb-14 inline-flex h-11 items-center justify-center rounded-lg bg-red-600 px-4 text-white"
+        >
+          홈으로
+        </Link>
+      </div>
     </main>
   )
 }

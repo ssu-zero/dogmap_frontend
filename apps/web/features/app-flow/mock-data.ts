@@ -50,6 +50,24 @@ export const currentUser = {
 export const requiredTermKeys = ["service", "privacy", "location"] as const
 export type RequiredTermKey = (typeof requiredTermKeys)[number]
 
+export const termsContent: Record<
+  RequiredTermKey,
+  { title: string; body: string }
+> = {
+  service: {
+    title: "서비스 이용약관",
+    body: "개동여지도는 반려동물과 함께할 수 있는 장소와 코스를 탐색할 수 있도록 돕습니다.\n\n서비스 이용과 코스 추천에 관한 필수 안내를 확인해 주세요.",
+  },
+  privacy: {
+    title: "개인정보 처리방침",
+    body: "개동여지도는 서비스 제공과 맞춤 코스 추천을 위해 필요한 정보를 안전하게 처리합니다.\n\n개인정보 처리 목적과 보관 기준을 확인해 주세요.",
+  },
+  location: {
+    title: "위치 기반 서비스 이용약관",
+    body: "현재 위치 정보는 출발지 주변의 반려견 동반 장소와 산책 코스를 추천하는 데 사용됩니다.\n\n위치 정보 이용 범위와 권한 설정 방법을 확인해 주세요.",
+  },
+}
+
 export type OnboardingProfile = {
   dogName: string
   dogSize: "small" | "medium" | "large" | null

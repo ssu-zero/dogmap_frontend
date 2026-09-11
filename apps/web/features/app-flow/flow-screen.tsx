@@ -12,6 +12,7 @@ import {
 import { Loading, LoadingSteps } from "@workspace/ui/components/loading"
 import { ChoiceButton } from "@workspace/ui/components/selection"
 import { TextField } from "@workspace/ui/components/text-field"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -26,6 +27,7 @@ import {
   isDogNameValid,
   isCourseDraftComplete,
   requiredTermKeys,
+  termsContent,
   toggleCourseTheme,
   type Course,
   type RequiredTermKey,
@@ -51,9 +53,11 @@ type Screen =
 function FlowScreen({
   screen,
   courseId,
+  term,
 }: {
   screen: Screen
   courseId?: string
+  term?: RequiredTermKey
 }) {
   const router = useRouter()
   const {
@@ -78,6 +82,7 @@ function FlowScreen({
   const [listOpen, setListOpen] = useState(false)
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
+  const [dogName, setDogName] = useState(user.dogName)
 
   const course = findCourse(courseId, courses)
   const ownCourse = course?.userId === user.id
@@ -96,9 +101,11 @@ function FlowScreen({
       <Plain>
         <section className="flex min-h-svh flex-col justify-between px-5 py-12">
           <div className="space-y-4">
-            <img
+            <Image
               src="/logo/with_paw.png"
               alt="개동여지도"
+              width={160}
+              height={64}
               className="h-auto w-40"
             />
             <h1 className="type-head-sb-24">개동여지도</h1>
@@ -130,9 +137,11 @@ function FlowScreen({
         <section className="flex min-h-svh flex-col py-8">
           <div className="flex-1 space-y-6">
             <LoadingSteps steps={["current", "upcoming"]} />
-            <img
+            <Image
               src="/img/dog.png"
               alt="반려견 프로필"
+              width={120}
+              height={120}
               className="mx-auto mt-12 size-30 rounded-full object-cover"
             />
             <h1 className="type-head-sb-24">
@@ -309,20 +318,21 @@ function FlowScreen({
     )
   }
 
-  if (screen === "terms-detail")
+  if (screen === "terms-detail") {
+    const selectedTerm = term ?? "service"
+    const detail = termsContent[selectedTerm]
     return (
       <Plain>
         <Header title="약관 상세" onBack={() => router.back()} />
         <article className="space-y-4 px-5 py-6">
-          <h1 className="type-head-sb-22">서비스 이용약관</h1>
+          <h1 className="type-head-sb-22">{detail.title}</h1>
           <p className="type-body-r-14 whitespace-pre-line text-gray-500">
-            개동여지도는 반려동물과 함께할 수 있는 장소와 코스를 탐색할 수
-            있도록 돕습니다.{"\n\n"}서비스 이용과 개인정보 처리에 관한 필수
-            안내를 확인해 주세요.
+            {detail.body}
           </p>
         </article>
       </Plain>
     )
+  }
 
   if (screen === "home")
     return (
@@ -620,16 +630,27 @@ function FlowScreen({
             </Button>
           ) : null}
           {screen === "community-detail" && !ownCourse ? (
-            <Button
-              size="full"
-              variant={saved ? "secondary" : "primary"}
-              onClick={() => {
-                saveCourse(course)
-                setSaved(true)
-              }}
-            >
-              {saved ? "내 코스에 저장됨" : "내 코스에 저장"}
-            </Button>
+            <div className="space-y-2">
+              <Button
+                size="full"
+                variant={saved ? "secondary" : "primary"}
+                onClick={() => {
+                  saveCourse(course)
+                  setSaved(true)
+                }}
+              >
+                {saved ? "내 코스에 저장됨" : "내 코스에 저장"}
+              </Button>
+              {saved ? (
+                <Button
+                  size="full"
+                  variant="text"
+                  onClick={() => router.push("/courses")}
+                >
+                  저장한 코스 확인하기
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </section>
       </Plain>
@@ -667,9 +688,13 @@ function FlowScreen({
         <Header title="마이페이지" />
         <section className="space-y-6 px-5 py-6">
           <div className="flex items-center gap-4">
-            <span className="flex size-16 items-center justify-center rounded-full bg-red-100 text-3xl">
-              🐶
-            </span>
+            <Image
+              src="/img/profile.png"
+              alt={`${user.dogName} 프로필`}
+              width={64}
+              height={64}
+              className="size-16 rounded-full object-cover"
+            />
             <div>
               <h1 className="type-head-sb-20">{user.name}</h1>
               <p className="type-body-r-14 text-gray-400">
@@ -703,32 +728,56 @@ function FlowScreen({
           className="space-y-5 px-5 py-6"
           onSubmit={(event) => {
             event.preventDefault()
-            updateUser({ name, age })
+            updateUser({
+              name: name.trim(),
+              age: age.trim(),
+              dogName: dogName.trim(),
+            })
             router.push("/mypage")
           }}
         >
           <div className="flex justify-center">
-            <span className="flex size-24 items-center justify-center rounded-full bg-red-100 text-4xl">
-              🐶
-            </span>
+            <Image
+              src="/img/profile.png"
+              alt={`${dogName || "반려견"} 프로필`}
+              width={96}
+              height={96}
+              className="size-24 rounded-full object-cover"
+            />
           </div>
           <label className="block space-y-2">
             <span className="type-body-sb-14">보호자 이름</span>
             <TextField
+              aria-label="보호자 이름"
               state="completed"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
           </label>
           <label className="block space-y-2">
+            <span className="type-body-sb-14">반려견 이름</span>
+            <TextField
+              aria-label="반려견 이름 수정"
+              state="completed"
+              value={dogName}
+              maxLength={20}
+              onChange={(event) => setDogName(event.target.value)}
+            />
+          </label>
+          <label className="block space-y-2">
             <span className="type-body-sb-14">반려견 나이</span>
             <TextField
+              aria-label="반려견 나이"
               state="completed"
               value={age}
               onChange={(event) => setAge(event.target.value)}
             />
           </label>
-          <Button size="full" type="submit" disabled={!name.trim()}>
+          <Button
+            size="full"
+            type="submit"
+            disabled={!name.trim() || !dogName.trim() || !age.trim()}
+          >
             저장하기
           </Button>
         </form>
