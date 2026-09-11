@@ -10,7 +10,7 @@ import {
   ListRow,
 } from "@workspace/ui/components/list"
 import { Loading, LoadingSteps } from "@workspace/ui/components/loading"
-import { AgreeButton, ChoiceButton } from "@workspace/ui/components/selection"
+import { ChoiceButton } from "@workspace/ui/components/selection"
 import { TextField } from "@workspace/ui/components/text-field"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -18,7 +18,14 @@ import { useEffect, useState } from "react"
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
-import { communityCourses, type Course } from "./mock-data"
+import {
+  communityCourses,
+  isDogInfoComplete,
+  isDogNameValid,
+  requiredTermKeys,
+  type Course,
+  type RequiredTermKey,
+} from "./mock-data"
 
 type Screen =
   | "login"
@@ -49,16 +56,21 @@ function FlowScreen({
     courses,
     createCourse,
     draftTitle,
+    dismissLocationPermissionPrompt,
+    completeOnboarding,
+    locationPermissionPromptOpen,
+    onboarding,
     saveCourse,
     setDraftTitle,
-    setTermsAgreed,
+    setAllTerms,
+    setTerm,
+    terms,
     termsAgreed,
+    updateOnboarding,
     updateUser,
     user,
   } = useAppFlow()
   const [title, setTitle] = useState(draftTitle)
-  const [allAgreed, setAllAgreed] = useState(false)
-  const [requiredAgreed, setRequiredAgreed] = useState(false)
   const [saved, setSaved] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [name, setName] = useState(user.name)
@@ -81,17 +93,19 @@ function FlowScreen({
       <Plain>
         <section className="flex min-h-svh flex-col justify-between px-5 py-12">
           <div className="space-y-4">
-            <span className="text-5xl" aria-hidden>
-              🐕
-            </span>
+            <img
+              src="/logo/with_paw.png"
+              alt="개동여지도"
+              className="h-auto w-40"
+            />
             <h1 className="type-head-sb-24">개동여지도</h1>
             <p className="type-body-r-16 text-gray-400">
               반려견과 떠나는 맞춤 여행 코스
             </p>
           </div>
           <div className="space-y-3">
-            <Button size="full" onClick={() => router.push("/onboarding/1")}>
-              카카오로 시작하기
+            <Button size="full" onClick={() => router.push("/terms")}>
+              카카오 로그인
             </Button>
             <Button
               variant="secondary"
@@ -106,112 +120,186 @@ function FlowScreen({
     )
   }
 
-  if (screen === "onboarding-one" || screen === "onboarding-two") {
-    const second = screen === "onboarding-two"
+  if (screen === "onboarding-one") {
+    const nameValid = isDogNameValid(onboarding.dogName)
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col px-5 py-8">
+        <section className="flex min-h-svh flex-col py-8">
           <div className="flex-1 space-y-6">
-            <LoadingSteps
-              steps={second ? ["past", "current"] : ["current", "upcoming"]}
+            <LoadingSteps steps={["current", "upcoming"]} />
+            <img
+              src="/img/dog.png"
+              alt="반려견 프로필"
+              className="mx-auto mt-12 size-30 rounded-full object-cover"
             />
-            <span className="block pt-16 text-6xl" aria-hidden>
-              {second ? "🗺️" : "🐶"}
-            </span>
             <h1 className="type-head-sb-24">
-              {second
-                ? "제로와 갈 곳을 찾아볼까요?"
-                : "반려견 정보를 알려주세요"}
+              함께 여행할 친구를
+              <br />
+              소개해 주세요
             </h1>
-            <p className="type-body-r-16 text-gray-400">
-              {second
-                ? "취향에 맞는 산책 코스를 추천해 드릴게요."
-                : "함께할 반려견을 등록하면 더 알맞게 추천할 수 있어요."}
-            </p>
-          </div>
-          <div className="flex gap-3">
-            {second ? (
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => router.back()}
-              >
-                이전
-              </Button>
+            <label className="block space-y-2">
+              <span className="type-body-sb-16">이름을 입력해주세요*</span>
+              <TextField
+                aria-label="반려견 이름"
+                state={onboarding.dogName ? "completed" : "writing"}
+                value={onboarding.dogName}
+                maxLength={20}
+                onChange={(event) =>
+                  updateOnboarding({ dogName: event.target.value })
+                }
+                placeholder="반려견 이름"
+              />
+            </label>
+            {onboarding.dogName && !nameValid ? (
+              <p className="type-caption-r-12 text-red-600">
+                이름을 1~20자로 입력해주세요.
+              </p>
             ) : null}
-            <Button
-              className="flex-1"
-              onClick={() => router.push(second ? "/terms" : "/onboarding/2")}
-            >
-              다음
-            </Button>
           </div>
+          <Button
+            size="full"
+            disabled={!nameValid}
+            onClick={() => router.push("/onboarding/2")}
+          >
+            다음
+          </Button>
+        </section>
+      </Plain>
+    )
+  }
+
+  if (screen === "onboarding-two") {
+    const complete = isDogInfoComplete(onboarding)
+    return (
+      <Plain>
+        <section className="flex min-h-svh flex-col py-8">
+          <div className="flex-1 space-y-6">
+            <button
+              type="button"
+              className="-ml-2"
+              onClick={() => router.back()}
+              aria-label="이전 단계로"
+            >
+              <span aria-hidden>‹</span>
+            </button>
+            <LoadingSteps steps={["past", "current"]} />
+            <div>
+              <h1 className="type-head-sb-24">
+                {onboarding.dogName}에게 맞는
+                <br />
+                코스를 짜드릴게요
+              </h1>
+              <p className="type-body-r-16 mt-3 text-gray-400">
+                입력한 정보로 산책 코스와 장소를 추천해줘요
+              </p>
+            </div>
+            <label className="block space-y-2">
+              <span className="type-body-sb-16">출생연도*</span>
+              <TextField
+                aria-label="출생연도"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="예: 2023"
+                value={onboarding.birthYear}
+                state={onboarding.birthYear ? "completed" : "writing"}
+                onChange={(event) =>
+                  updateOnboarding({
+                    birthYear: event.target.value.replace(/\D/g, ""),
+                  })
+                }
+              />
+            </label>
+            <fieldset className="space-y-3">
+              <legend className="type-body-sb-16">크기*</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["small", "소형", "10kg 이하"],
+                    ["medium", "중형", "10kg ~ 25kg"],
+                    ["large", "대형", "25kg 이상"],
+                  ] as const
+                ).map(([size, label, description]) => (
+                  <ChoiceButton
+                    key={size}
+                    aria-pressed={onboarding.dogSize === size}
+                    state={onboarding.dogSize === size ? "selected" : "default"}
+                    description={description}
+                    onClick={() => updateOnboarding({ dogSize: size })}
+                  >
+                    {label}
+                  </ChoiceButton>
+                ))}
+              </div>
+            </fieldset>
+            <div className="rounded-xl bg-red-50 p-4">
+              <p className="type-body-r-14 text-gray-500">
+                체중·나이는 권장 체류시간을 계산하고 무리 없는 코스를 추천하는
+                데 사용돼요.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="full"
+            disabled={!complete}
+            onClick={() => {
+              completeOnboarding()
+              router.push("/")
+            }}
+          >
+            개동여지도 시작하기
+          </Button>
         </section>
       </Plain>
     )
   }
 
   if (screen === "terms") {
-    const agreeAll = () => {
-      const next = !allAgreed
-      setAllAgreed(next)
-      setRequiredAgreed(next)
-    }
+    const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <Header title="약관 동의" onBack={() => router.back()} />
-        <section className="space-y-4 px-5 pt-6">
-          <h1 className="type-head-sb-24">
-            서비스 이용을 위해
-            <br />
-            약관에 동의해 주세요
-          </h1>
-          <button
-            className="type-body-sb-16 flex w-full items-center gap-3 border-b border-gray-100 py-5 text-left"
-            onClick={agreeAll}
-            aria-pressed={allAgreed}
-          >
-            <span className={allAgreed ? "text-red-600" : "text-gray-200"}>
-              ●
-            </span>
-            전체 동의
-          </button>
-          <div className="space-y-2">
-            <AgreeButton
-              checked={requiredAgreed}
-              onClick={() => setRequiredAgreed((value) => !value)}
+        <section className="flex min-h-svh flex-col py-12">
+          <div className="flex-1 space-y-5">
+            <h1 className="type-head-sb-24">약관에 동의해주세요</h1>
+            <p className="type-body-r-16 text-gray-400">
+              서비스를 이용하기 위해서는 동의가 필요해요.
+            </p>
+            <button
+              className="type-body-sb-16 flex w-full items-center gap-3 border-b border-gray-100 py-5 text-left"
+              onClick={() => setAllTerms(!allAgreed)}
+              aria-pressed={allAgreed}
             >
-              필수 · 서비스 이용약관{" "}
-              <Link
-                href="/terms/service"
-                onClick={(event) => event.stopPropagation()}
-              >
-                보기
-              </Link>
-            </AgreeButton>
-            <AgreeButton
-              checked={requiredAgreed}
-              onClick={() => setRequiredAgreed((value) => !value)}
-            >
-              필수 · 개인정보 처리방침{" "}
-              <Link
-                href="/terms/privacy"
-                onClick={(event) => event.stopPropagation()}
-              >
-                보기
-              </Link>
-            </AgreeButton>
+              <span className={allAgreed ? "text-red-600" : "text-gray-200"}>
+                ●
+              </span>
+              네, 모두 동의합니다.
+            </button>
+            <div className="space-y-3">
+              <TermRow
+                term="service"
+                label="서비스 이용약관"
+                checked={terms.service}
+                onToggle={setTerm}
+              />
+              <TermRow
+                term="privacy"
+                label="개인정보 처리방침"
+                checked={terms.privacy}
+                onToggle={setTerm}
+              />
+              <TermRow
+                term="location"
+                label="위치 기반 서비스 이용약관"
+                checked={terms.location}
+                onToggle={setTerm}
+              />
+            </div>
           </div>
           <Button
             size="full"
-            disabled={!requiredAgreed}
-            className="mt-8"
-            onClick={() => {
-              setTermsAgreed(true)
-              router.push("/")
-            }}
+            disabled={!termsAgreed}
+            onClick={() => router.push("/onboarding/1")}
           >
-            동의하고 시작하기
+            가입 완료
           </Button>
         </section>
       </Plain>
@@ -273,6 +361,36 @@ function FlowScreen({
             ))}
           </section>
         </section>
+        {locationPermissionPromptOpen ? (
+          <div
+            className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 px-8"
+            role="dialog"
+            aria-modal="true"
+            aria-label="위치 정보 권한"
+          >
+            <section className="w-full max-w-62.5 rounded-xl bg-white p-6 text-center shadow-lg">
+              <p className="type-head-sb-18">
+                위치 정보 권한 허용을 위해
+                <br />
+                설정으로 이동합니다
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <Button
+                  variant="dark"
+                  onClick={dismissLocationPermissionPrompt}
+                >
+                  아니요
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={dismissLocationPermissionPrompt}
+                >
+                  설정
+                </Button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </AppShell>
     )
 
@@ -576,6 +694,39 @@ function FlowScreen({
 
 function Plain({ children }: { children: React.ReactNode }) {
   return <main className="layout-mobile min-h-svh bg-white">{children}</main>
+}
+
+function TermRow({
+  term,
+  label,
+  checked,
+  onToggle,
+}: {
+  term: RequiredTermKey
+  label: string
+  checked: boolean
+  onToggle: (term: RequiredTermKey, value: boolean) => void
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <button
+        type="button"
+        className="type-body-r-16 flex min-w-0 items-center gap-3 text-left"
+        aria-label={`${label} 동의`}
+        aria-pressed={checked}
+        onClick={() => onToggle(term, !checked)}
+      >
+        <span className={checked ? "text-red-600" : "text-gray-200"}>●</span>
+        <span>(필수) {label}</span>
+      </button>
+      <Link
+        href={`/terms/${term}`}
+        className="type-body-r-14 shrink-0 text-gray-400"
+      >
+        보기
+      </Link>
+    </div>
+  )
 }
 function findCourse(id: string | undefined, courses: Course[]) {
   if (id === "edge-case")

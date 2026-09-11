@@ -8,17 +8,32 @@ import {
   type ReactNode,
 } from "react"
 
-import { currentUser, type Course } from "./mock-data"
+import {
+  currentUser,
+  initialOnboardingProfile,
+  type Course,
+  type OnboardingProfile,
+  type RequiredTermKey,
+} from "./mock-data"
+
+type TermsAgreement = Record<RequiredTermKey, boolean>
 
 type AppFlowState = {
   user: typeof currentUser
   courses: Course[]
+  terms: TermsAgreement
   termsAgreed: boolean
+  onboarding: OnboardingProfile
+  locationPermissionPromptOpen: boolean
   draftTitle: string
   updateUser: (updates: Partial<typeof currentUser>) => void
   createCourse: (title: string) => Course
   saveCourse: (course: Course) => void
-  setTermsAgreed: (value: boolean) => void
+  setTerm: (term: RequiredTermKey, value: boolean) => void
+  setAllTerms: (value: boolean) => void
+  updateOnboarding: (updates: Partial<OnboardingProfile>) => void
+  completeOnboarding: () => void
+  dismissLocationPermissionPrompt: () => void
   setDraftTitle: (value: string) => void
 }
 
@@ -27,14 +42,24 @@ const AppFlowContext = createContext<AppFlowState | null>(null)
 function AppFlowProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState(currentUser)
   const [courses, setCourses] = useState<Course[]>([])
-  const [termsAgreed, setTermsAgreed] = useState(false)
+  const [terms, setTerms] = useState<TermsAgreement>({
+    service: false,
+    privacy: false,
+    location: false,
+  })
+  const [onboarding, setOnboarding] = useState(initialOnboardingProfile)
+  const [locationPermissionPromptOpen, setLocationPermissionPromptOpen] =
+    useState(false)
   const [draftTitle, setDraftTitle] = useState("제로와 함께하는 주말 산책")
 
   const value = useMemo<AppFlowState>(
     () => ({
       user,
       courses,
-      termsAgreed,
+      terms,
+      termsAgreed: Object.values(terms).every(Boolean),
+      onboarding,
+      locationPermissionPromptOpen,
       draftTitle,
       updateUser: (updates) =>
         setUser((previous) => ({ ...previous, ...updates })),
@@ -55,10 +80,24 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
             ? previous
             : [{ ...course, saved: true }, ...previous]
         ),
-      setTermsAgreed,
+      setTerm: (term, value) =>
+        setTerms((previous) => ({ ...previous, [term]: value })),
+      setAllTerms: (value) =>
+        setTerms({ service: value, privacy: value, location: value }),
+      updateOnboarding: (updates) =>
+        setOnboarding((previous) => ({ ...previous, ...updates })),
+      completeOnboarding: () => {
+        setUser((previous) => ({
+          ...previous,
+          dogName: onboarding.dogName.trim(),
+        }))
+        setLocationPermissionPromptOpen(true)
+      },
+      dismissLocationPermissionPrompt: () =>
+        setLocationPermissionPromptOpen(false),
       setDraftTitle,
     }),
-    [courses, draftTitle, termsAgreed, user]
+    [courses, draftTitle, locationPermissionPromptOpen, onboarding, terms, user]
   )
 
   return (

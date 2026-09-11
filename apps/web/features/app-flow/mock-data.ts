@@ -15,6 +15,29 @@ export const currentUser = {
   age: "3살",
 }
 
+export const requiredTermKeys = ["service", "privacy", "location"] as const
+export type RequiredTermKey = (typeof requiredTermKeys)[number]
+
+export type OnboardingProfile = {
+  dogName: string
+  dogSize: "small" | "medium" | "large" | null
+  birthYear: string
+}
+
+export const initialOnboardingProfile: OnboardingProfile = {
+  dogName: "",
+  dogSize: null,
+  birthYear: "",
+}
+
+export function isDogNameValid(dogName: string) {
+  return dogName.trim().length >= 1 && dogName.trim().length <= 20
+}
+
+export function isDogInfoComplete(profile: OnboardingProfile) {
+  return Boolean(profile.dogSize && /^20\d{2}$/.test(profile.birthYear))
+}
+
 export const communityCourses: Course[] = [
   {
     id: "seoul-forest",
