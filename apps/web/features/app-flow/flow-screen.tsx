@@ -877,9 +877,9 @@ function FlowScreen({
             <Image
               src="/img/profile.png"
               alt={`${user.dogName} 프로필`}
-              width={64}
-              height={64}
-              className="size-16 rounded-full object-cover"
+              width={80}
+              height={80}
+              className="size-20 rounded-full object-cover"
             />
             <div className="min-w-0 flex-1">
               <h1 className="type-head-sb-20">{user.dogName}</h1>
