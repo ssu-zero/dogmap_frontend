@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test"
 export default defineConfig({
   testDir: "./apps/web/e2e",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: "http://127.0.0.1:3001",
   },
   projects: [
     {
@@ -20,9 +20,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm --filter web exec next dev --port 3000",
+    command: "E2E=1 pnpm --filter web exec next dev --port 3001",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    url: "http://127.0.0.1:3000",
+    url: "http://127.0.0.1:3001",
   },
 })

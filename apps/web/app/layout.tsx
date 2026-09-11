@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import "@workspace/ui/globals.css"
 import { QueryProvider } from "@/components/query-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { AppFlowProvider } from "@/features/app-flow/app-flow-provider"
 
 export const metadata: Metadata = {
   title: "개동여지도",
@@ -18,7 +19,9 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <AppFlowProvider>{children}</AppFlowProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
