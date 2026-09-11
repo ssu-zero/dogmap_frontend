@@ -997,10 +997,18 @@ function FlowScreen({
   return (
     <Plain>
       <section className="flex min-h-svh flex-col items-center justify-center gap-5 px-5 text-center">
-        <span className="text-5xl">⚠️</span>
-        <h1 className="type-head-sb-24">문제가 발생했어요</h1>
-        <p className="type-body-r-14 text-gray-400">
-          잠시 후 다시 시도하거나 홈으로 돌아가 주세요.
+        <Image
+          src="/img/dog.png"
+          alt="문제를 확인하는 반려견"
+          width={120}
+          height={120}
+          className="h-[121px] w-auto object-contain"
+        />
+        <h1 className="type-body-sb-16">알 수 없는 에러가 발생했습니다</h1>
+        <p className="type-caption-r-12 text-gray-400">
+          예기치 못한 에러가 발생했습니다
+          <br />
+          다시 시작해 주세요
         </p>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => router.refresh()}>

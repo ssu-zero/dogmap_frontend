@@ -30,7 +30,7 @@ test("opens a reusable term detail and returns to my page", async ({
 test("renders the error and not-found recovery actions", async ({ page }) => {
   await page.goto("/error-demo")
   await expect(
-    page.getByRole("heading", { name: "문제가 발생했어요" })
+    page.getByRole("heading", { name: "알 수 없는 에러가 발생했습니다" })
   ).toBeVisible()
   await page.getByRole("button", { name: "홈으로" }).click()
   await expect(
@@ -39,7 +39,7 @@ test("renders the error and not-found recovery actions", async ({ page }) => {
 
   await page.goto("/route-that-does-not-exist")
   await expect(
-    page.getByRole("heading", { name: "페이지를 찾을 수 없어요" })
+    page.getByRole("heading", { name: "페이지를 찾을 수 없습니다" })
   ).toBeVisible()
   await page.getByRole("link", { name: "홈으로 돌아가기" }).click()
   await expect(
