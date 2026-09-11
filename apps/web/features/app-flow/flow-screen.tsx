@@ -46,6 +46,8 @@ type Screen =
   | "course-detail"
   | "community"
   | "community-detail"
+  | "archive"
+  | "archive-detail"
   | "mypage"
   | "mypage-edit"
   | "error"
@@ -84,6 +86,7 @@ function FlowScreen({
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
+  const [diary, setDiary] = useState("")
 
   const course = findCourse(courseId, courses)
   const ownCourse = course?.userId === user.id
@@ -462,11 +465,53 @@ function FlowScreen({
           }}
         >
           <div>
-            <h1 className="type-head-sb-24">어떤 산책을 원하시나요?</h1>
+            <h1 className="type-head-sb-24">코스 만들기</h1>
             <p className="type-body-r-14 mt-2 text-gray-400">
-              조건을 선택하면 코스를 추천해 드릴게요.
+              {user.dogName}에게 맞는 여행 조건을 알려주세요.
             </p>
           </div>
+          <label className="block space-y-2">
+            <span className="type-body-sb-16">날짜*</span>
+            <TextField
+              aria-label="날짜"
+              type="date"
+              state={courseDraft.date ? "completed" : "writing"}
+              value={courseDraft.date}
+              onChange={(event) => updateCourseDraft({ date: event.target.value })}
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-2">
+              <span className="type-body-sb-16">시작 시간*</span>
+              <TextField
+                aria-label="시작 시간"
+                type="time"
+                state={courseDraft.startTime ? "completed" : "writing"}
+                value={courseDraft.startTime}
+                onChange={(event) => updateCourseDraft({ startTime: event.target.value })}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="type-body-sb-16">종료 시간*</span>
+              <TextField
+                aria-label="종료 시간"
+                type="time"
+                state={courseDraft.endTime ? "completed" : "writing"}
+                value={courseDraft.endTime}
+                onChange={(event) => updateCourseDraft({ endTime: event.target.value })}
+              />
+            </label>
+          </div>
+          <label className="block space-y-2">
+            <span className="type-body-sb-16">출발 위치*</span>
+            <TextField
+              aria-label="출발 위치"
+              state={courseDraft.startLocation ? "completed" : "writing"}
+              value={courseDraft.startLocation}
+              onChange={(event) => updateCourseDraft({ startLocation: event.target.value })}
+              placeholder="현재 위치 · 익산역"
+            />
+          </label>
           <label className="block space-y-2">
             <span className="type-body-sb-16">코스 이름*</span>
             <TextField
@@ -528,7 +573,7 @@ function FlowScreen({
             </div>
           </fieldset>
           <p className="type-caption-r-12 text-gray-400">
-            시간과 원하는 코스를 모두 선택하면 추천을 시작할 수 있어요.
+            필수 조건과 원하는 코스를 모두 선택하면 추천을 시작할 수 있어요.
           </p>
           <Button
             size="full"
@@ -561,7 +606,7 @@ function FlowScreen({
       </Plain>
     )
 
-  if (screen === "course-detail" || screen === "community-detail") {
+  if (screen === "course-detail" || screen === "community-detail" || screen === "archive-detail") {
     if (!course)
       return (
         <Plain>
@@ -572,7 +617,7 @@ function FlowScreen({
     return (
       <Plain>
         <Header
-          title={screen === "community-detail" ? "커뮤니티 코스" : "코스 상세"}
+          title={screen === "community-detail" ? "커뮤니티 코스" : screen === "archive-detail" ? "발자국" : "코스 상세"}
           onBack={() => router.back()}
           trailing={
             ownCourse ? (
@@ -652,6 +697,22 @@ function FlowScreen({
               />
             ))}
           </section>
+          {screen === "archive-detail" ? (
+            <section className="space-y-3 rounded-2xl bg-orange-50 p-4">
+              <div>
+                <h2 className="type-body-sb-16">오늘의 여행 일기</h2>
+                <p className="type-body-r-14 mt-1 text-gray-500">코스에서 남기고 싶은 순간을 기록해 보세요.</p>
+              </div>
+              <textarea
+                aria-label="여행 일기"
+                className="type-body-r-14 min-h-28 w-full rounded-xl border border-gray-150 bg-white p-3 focus:outline-none"
+                placeholder="오늘 {user.dogName}와 함께한 이야기를 남겨보세요."
+                value={diary}
+                onChange={(event) => setDiary(event.target.value)}
+              />
+              <Button size="full" disabled={!diary.trim()}>일기 저장하기</Button>
+            </section>
+          ) : null}
           {screen === "course-detail" && ownCourse ? (
             <Button
               size="full"
@@ -710,6 +771,40 @@ function FlowScreen({
               />
             </button>
           ))}
+        </section>
+      </AppShell>
+    )
+
+  if (screen === "archive")
+    return (
+      <AppShell tab="archive">
+        <section className="space-y-6 px-5 py-6">
+          <div>
+            <h1 className="type-head-sb-24">{user.dogName}의 발자국</h1>
+            <p className="type-body-sb-16 mt-2">지금까지의 여정</p>
+          </div>
+          {courses.length === 0 ? (
+            <EmptyState
+              title="아직 남긴 발자국이 없어요"
+              description="첫 코스를 만들고 제로와의 여행을 기록해 보세요."
+            />
+          ) : (
+            <section className="space-y-3" aria-label="여행 발자국">
+              {courses.map((item) => (
+                <button
+                  key={item.id}
+                  className="w-full text-left"
+                  onClick={() => router.push(`/archive/${item.id}`)}
+                >
+                  <CourseCard title={item.title} hours={item.duration / 60} spots={item.places.length} />
+                </button>
+              ))}
+            </section>
+          )}
+          <section className="rounded-2xl bg-gray-50 p-4">
+            <h2 className="type-body-sb-16">이달의 활동</h2>
+            <p className="type-body-r-14 mt-2 text-gray-500">완성한 코스 {courses.length}개 · 새로운 발자국을 남겨보세요.</p>
+          </section>
         </section>
       </AppShell>
     )

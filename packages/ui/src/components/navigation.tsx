@@ -13,8 +13,8 @@ const defaultNavigationItems: NavigationItem[] = [
   { value: "home", label: "홈", icon: "homeLine", activeIcon: "homeFill" },
   { value: "course", label: "코스", icon: "location", activeIcon: "location" },
   {
-    value: "community",
-    label: "커뮤니티",
+    value: "archive",
+    label: "발자국",
     icon: "chatLine",
     activeIcon: "chatFill",
   },

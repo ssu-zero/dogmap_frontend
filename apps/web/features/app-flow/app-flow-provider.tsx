@@ -72,11 +72,14 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
           title: draft.title.trim(),
           duration: draft.duration ?? 90,
           places: [
-            "출발지 주변 공원",
+            draft.startLocation.trim(),
             ...(draft.themes.includes("카페") ? ["반려견 동반 카페"] : []),
             ...(draft.themes.includes("활동") ? ["반려견 놀이터"] : []),
             "휴식 스팟",
           ],
+          date: draft.date,
+          startTime: draft.startTime,
+          endTime: draft.endTime,
         }
         setCourses((previous) => [course, ...previous])
         return course

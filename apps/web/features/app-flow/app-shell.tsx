@@ -7,6 +7,7 @@ import type { ReactNode } from "react"
 const tabs = {
   home: "/",
   course: "/courses",
+  archive: "/archive",
   community: "/community",
   mypage: "/mypage",
 } as const

@@ -6,6 +6,9 @@ export type Course = {
   places: string[]
   saved?: boolean
   edge?: boolean
+  date?: string
+  startTime?: string
+  endTime?: string
 }
 
 export const courseDurations = [60, 90, 120] as const
@@ -16,12 +19,20 @@ export type CourseTheme = (typeof courseThemes)[number]
 
 export type CourseDraft = {
   title: string
+  date: string
+  startTime: string
+  endTime: string
+  startLocation: string
   duration: CourseDuration | null
   themes: CourseTheme[]
 }
 
 export const initialCourseDraft: CourseDraft = {
   title: "",
+  date: "",
+  startTime: "",
+  endTime: "",
+  startLocation: "",
   duration: null,
   themes: [],
 }
@@ -29,6 +40,10 @@ export const initialCourseDraft: CourseDraft = {
 export function isCourseDraftComplete(draft: CourseDraft) {
   return (
     Boolean(draft.title.trim()) &&
+    Boolean(draft.date) &&
+    Boolean(draft.startTime) &&
+    Boolean(draft.endTime) &&
+    Boolean(draft.startLocation.trim()) &&
     Boolean(draft.duration) &&
     draft.themes.length > 0
   )
