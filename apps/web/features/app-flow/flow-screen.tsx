@@ -1,5 +1,6 @@
 "use client"
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@workspace/ui/components/button"
 import { Chip } from "@workspace/ui/components/chip"
 import { EmptyState } from "@workspace/ui/components/empty-state"
@@ -15,7 +16,27 @@ import { TextField } from "@workspace/ui/components/text-field"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+
+import { getAccessToken, getSignupToken, setAccessToken } from "@/api/client"
+import {
+  createCourseMutationOptions,
+  nearbyCoursesQueryOptions,
+} from "@/query/course"
+import {
+  dogQueryKeys,
+  myDogQueryOptions,
+  registerDogMutationOptions,
+  updateMyDogMutationOptions,
+} from "@/query/dog"
+
+import { getKakaoAuthorizeUrl, useDemoMode } from "../auth/kakao"
+import {
+  apiCourseToFlowCourse,
+  courseDraftToApiRequest,
+  nearbyCourseToFlowCourse,
+  onboardingToDogCreate,
+} from "./api-mappers"
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
@@ -65,7 +86,9 @@ function FlowScreen({
   const router = useRouter()
   const {
     courses,
-    createCourse,
+    createCourse: createDemoCourse,
+    addCourse,
+    coordinates,
     courseDraft,
     dismissLocationPermissionPrompt,
     completeOnboarding,
@@ -75,6 +98,7 @@ function FlowScreen({
     saveDiary,
     diaries,
     updateCourseDraft,
+    updateCoordinates,
     setAllTerms,
     setTerm,
     terms,
@@ -83,28 +107,129 @@ function FlowScreen({
     updateUser,
     user,
   } = useAppFlow()
+  const queryClient = useQueryClient()
+  const demoMode = useDemoMode()
+  const generationStarted = useRef(false)
+  const dogHydrated = useRef(false)
+  const [hasAccessToken, setHasAccessToken] = useState(false)
+  const [authConfigurationError, setAuthConfigurationError] = useState(false)
+  const [generationError, setGenerationError] = useState<string | null>(null)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const registerDog = useMutation(registerDogMutationOptions())
+  const createApiCourse = useMutation(createCourseMutationOptions())
+  const updateDog = useMutation(updateMyDogMutationOptions())
+  const myDog = useQuery({
+    ...myDogQueryOptions(),
+    enabled: hasAccessToken && !demoMode,
+  })
+  const nearbyCourses = useQuery({
+    ...nearbyCoursesQueryOptions({
+      lat: coordinates.lat,
+      lng: coordinates.lng,
+      radius_m: 3000,
+      limit: 10,
+    }),
+    enabled:
+      !demoMode &&
+      (screen === "home" || (screen === "course-detail" && Boolean(courseId))),
+  })
   const [saved, setSaved] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null)
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
+  const [dogSize, setDogSize] = useState<"SMALL" | "MEDIUM" | "LARGE">("SMALL")
   const [draftDiaries, setDraftDiaries] = useState<Record<string, string>>({})
   const [communityFilter, setCommunityFilter] = useState<
     "전체" | "소형" | "중형" | "대형"
   >("전체")
 
-  const course = findCourse(courseId, courses)
+  const serverRecommendations = (nearbyCourses.data ?? []).map(
+    nearbyCourseToFlowCourse
+  )
+  const course = findCourse(
+    courseId,
+    [...courses, ...serverRecommendations],
+    demoMode
+  )
   const ownCourse = course?.userId === user.id
+  const generationDisplayError =
+    generationError ??
+    createApiCourse.error?.message ??
+    (screen === "generating" && !demoMode && !hasAccessToken
+      ? "코스를 만들려면 카카오 로그인이 필요합니다."
+      : null)
+  const activeDogSize = myDog.data?.size ?? dogSize
+  const activeDogSizeLabel =
+    activeDogSize === "SMALL"
+      ? "소형견"
+      : activeDogSize === "MEDIUM"
+        ? "중형견"
+        : "대형견"
 
   useEffect(() => {
-    if (screen !== "generating") return
-    const timeout = window.setTimeout(() => {
-      const generated = createCourse(courseDraft)
-      router.replace(`/courses/${generated.id}`)
-    }, 1200)
-    return () => window.clearTimeout(timeout)
-  }, [courseDraft, createCourse, router, screen])
+    const syncAuthState = () => setHasAccessToken(Boolean(getAccessToken()))
+    syncAuthState()
+    window.addEventListener("dogmap:auth-changed", syncAuthState)
+    return () =>
+      window.removeEventListener("dogmap:auth-changed", syncAuthState)
+  }, [])
+
+  useEffect(() => {
+    if (!myDog.data || dogHydrated.current) return
+    dogHydrated.current = true
+    const nextAge =
+      myDog.data.age === null ? "나이 미입력" : `${myDog.data.age}살`
+    setDogName(myDog.data.name)
+    setAge(nextAge)
+    setDogSize(myDog.data.size)
+    updateUser({
+      dogName: myDog.data.name,
+      age: nextAge,
+    })
+  }, [myDog.data, updateUser])
+
+  useEffect(() => {
+    if (screen !== "generating" || generationStarted.current) return
+    generationStarted.current = true
+
+    if (demoMode) {
+      const timeout = window.setTimeout(() => {
+        const generated = createDemoCourse(courseDraft)
+        router.replace(`/courses/${generated.id}`)
+      }, 1200)
+      return () => {
+        window.clearTimeout(timeout)
+        generationStarted.current = false
+      }
+    }
+
+    if (!getAccessToken()) {
+      return
+    }
+
+    void createApiCourse
+      .mutateAsync(courseDraftToApiRequest(courseDraft, coordinates))
+      .then((result) => {
+        const generated = apiCourseToFlowCourse(result, user.id)
+        addCourse(generated)
+        router.replace(`/courses/${generated.id}`)
+      })
+      .catch((error: Error) => {
+        setGenerationError(error.message)
+      })
+  }, [
+    addCourse,
+    coordinates,
+    courseDraft,
+    createApiCourse,
+    createDemoCourse,
+    demoMode,
+    router,
+    screen,
+    user.id,
+  ])
 
   if (screen === "login") {
     return (
@@ -136,17 +261,36 @@ function FlowScreen({
             <Button
               size="full"
               className="rounded-lg bg-[#fee500] text-gray-900 hover:bg-[#fee500]"
-              onClick={() => router.push("/terms")}
+              onClick={() => {
+                if (demoMode) {
+                  router.push("/terms")
+                  return
+                }
+
+                const authorizeUrl = getKakaoAuthorizeUrl()
+                if (!authorizeUrl) {
+                  setAuthConfigurationError(true)
+                  return
+                }
+                window.location.assign(authorizeUrl)
+              }}
             >
               카카오 로그인
             </Button>
-            <Button
-              variant="text"
-              size="full"
-              onClick={() => router.push(termsAgreed ? "/" : "/terms")}
-            >
-              기존 사용자로 둘러보기
-            </Button>
+            {demoMode ? (
+              <Button
+                variant="text"
+                size="full"
+                onClick={() => router.push(termsAgreed ? "/" : "/terms")}
+              >
+                데모 사용자로 둘러보기
+              </Button>
+            ) : null}
+            {authConfigurationError ? (
+              <p role="alert" className="type-caption-r-12 text-red-600">
+                카카오 로그인 환경 설정이 필요합니다.
+              </p>
+            ) : null}
           </div>
         </section>
       </Plain>
@@ -275,14 +419,48 @@ function FlowScreen({
           </div>
           <Button
             size="full"
-            disabled={!complete}
+            disabled={
+              !complete ||
+              registerDog.isPending ||
+              (!demoMode && !getSignupToken())
+            }
             onClick={() => {
-              completeOnboarding()
-              router.push("/")
+              if (demoMode) {
+                completeOnboarding()
+                router.push("/")
+                return
+              }
+
+              if (!getSignupToken()) return
+              registerDog.mutate(onboardingToDogCreate(onboarding), {
+                onSuccess: (result) => {
+                  setAccessToken(result.access_token)
+                  updateUser({
+                    dogName: result.dog.name,
+                    age:
+                      result.dog.age === null
+                        ? "나이 미입력"
+                        : `${result.dog.age}살`,
+                  })
+                  completeOnboarding()
+                  queryClient.setQueryData(dogQueryKeys.me, result.dog)
+                  router.push("/")
+                },
+              })
             }}
           >
-            개동여지도 시작하기
+            {registerDog.isPending ? "프로필 등록 중" : "개동여지도 시작하기"}
           </Button>
+          {!demoMode && !getSignupToken() ? (
+            <p role="alert" className="type-caption-r-12 mt-2 text-red-600">
+              카카오 로그인을 먼저 완료해주세요.
+            </p>
+          ) : null}
+          {registerDog.isError ? (
+            <p role="alert" className="type-caption-r-12 mt-2 text-red-600">
+              {registerDog.error.message}
+            </p>
+          ) : null}
         </section>
       </Plain>
     )
@@ -381,20 +559,37 @@ function FlowScreen({
           </section>
           <section className="space-y-3">
             <h2 className="type-head-sb-20">추천 코스</h2>
-            {communityCourses.slice(0, 1).map((item) => (
+            {(demoMode
+              ? communityCourses.slice(0, 1)
+              : serverRecommendations.slice(0, 1)
+            ).map((item) => (
               <button
                 className="w-full text-left"
                 key={item.id}
-                onClick={() => router.push(`/community/${item.id}`)}
+                onClick={() =>
+                  router.push(
+                    demoMode ? `/community/${item.id}` : `/courses/${item.id}`
+                  )
+                }
               >
                 <CourseCard
                   title={item.title}
-                  hours={1.5}
-                  spots={item.places.length}
+                  hours={item.duration / 60}
+                  spots={item.placeCount ?? item.places.length}
                   variant="community-y"
                 />
               </button>
             ))}
+            {!demoMode && nearbyCourses.isPending ? (
+              <p className="type-body-r-14 text-gray-400">
+                주변 코스를 불러오고 있어요.
+              </p>
+            ) : null}
+            {!demoMode && nearbyCourses.isError ? (
+              <p role="alert" className="type-body-r-14 text-red-600">
+                주변 코스를 불러오지 못했어요.
+              </p>
+            ) : null}
           </section>
         </section>
         {locationPermissionPromptOpen ? (
@@ -419,7 +614,19 @@ function FlowScreen({
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={dismissLocationPermissionPrompt}
+                  onClick={() => {
+                    if (!("geolocation" in navigator)) {
+                      dismissLocationPermissionPrompt()
+                      return
+                    }
+                    navigator.geolocation.getCurrentPosition(({ coords }) => {
+                      updateCoordinates({
+                        lat: coords.latitude,
+                        lng: coords.longitude,
+                      })
+                      dismissLocationPermissionPrompt()
+                    }, dismissLocationPermissionPrompt)
+                  }}
                 >
                   설정
                 </Button>
@@ -498,7 +705,9 @@ function FlowScreen({
               type="date"
               state={courseDraft.date ? "completed" : "writing"}
               value={courseDraft.date}
-              onChange={(event) => updateCourseDraft({ date: event.target.value })}
+              onChange={(event) =>
+                updateCourseDraft({ date: event.target.value })
+              }
             />
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -509,7 +718,9 @@ function FlowScreen({
                 type="time"
                 state={courseDraft.startTime ? "completed" : "writing"}
                 value={courseDraft.startTime}
-                onChange={(event) => updateCourseDraft({ startTime: event.target.value })}
+                onChange={(event) =>
+                  updateCourseDraft({ startTime: event.target.value })
+                }
               />
             </label>
             <label className="block space-y-2">
@@ -519,7 +730,9 @@ function FlowScreen({
                 type="time"
                 state={courseDraft.endTime ? "completed" : "writing"}
                 value={courseDraft.endTime}
-                onChange={(event) => updateCourseDraft({ endTime: event.target.value })}
+                onChange={(event) =>
+                  updateCourseDraft({ endTime: event.target.value })
+                }
               />
             </label>
           </div>
@@ -529,7 +742,9 @@ function FlowScreen({
               aria-label="출발 위치"
               state={courseDraft.startLocation ? "completed" : "writing"}
               value={courseDraft.startLocation}
-              onChange={(event) => updateCourseDraft({ startLocation: event.target.value })}
+              onChange={(event) =>
+                updateCourseDraft({ startLocation: event.target.value })
+              }
               placeholder="현재 위치 · 익산역"
             />
           </label>
@@ -622,12 +837,37 @@ function FlowScreen({
               잠시만 기다려 주세요.
             </p>
           </div>
-          <Loading state="ing" />
+          {generationDisplayError ? (
+            <div className="space-y-3" role="alert">
+              <p className="type-body-r-14 text-red-600">
+                {generationDisplayError}
+              </p>
+              <Button
+                size="full"
+                onClick={() => {
+                  if (!demoMode && !getAccessToken()) {
+                    router.replace("/login")
+                    return
+                  }
+                  generationStarted.current = false
+                  setGenerationError(null)
+                }}
+              >
+                {!demoMode && !hasAccessToken ? "로그인하기" : "다시 시도"}
+              </Button>
+            </div>
+          ) : (
+            <Loading state="ing" />
+          )}
         </section>
       </Plain>
     )
 
-  if (screen === "course-detail" || screen === "community-detail" || screen === "archive-detail") {
+  if (
+    screen === "course-detail" ||
+    screen === "community-detail" ||
+    screen === "archive-detail"
+  ) {
     if (!course)
       return (
         <Plain>
@@ -639,7 +879,13 @@ function FlowScreen({
     return (
       <Plain>
         <Header
-          title={screen === "community-detail" ? "커뮤니티 코스" : screen === "archive-detail" ? "발자국" : "코스 상세"}
+          title={
+            screen === "community-detail"
+              ? "커뮤니티 코스"
+              : screen === "archive-detail"
+                ? "발자국"
+                : "코스 상세"
+          }
           onBack={() => router.back()}
           trailing={
             ownCourse ? (
@@ -663,7 +909,8 @@ function FlowScreen({
             </div>
             <h1 className="type-head-sb-24 mt-3">{course.title}</h1>
             <p className="type-body-r-14 mt-1 text-gray-400">
-              약 {course.duration}분 · {course.places.length}곳
+              약 {course.duration}분 ·{" "}
+              {course.placeCount ?? course.places.length}곳
             </p>
           </div>
           <button
@@ -710,6 +957,12 @@ function FlowScreen({
             </div>
           ) : null}
           <section className="space-y-2">
+            {course.summaryOnly ? (
+              <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                서버의 코스 상세 조회 API가 아직 없어 요약 정보만 표시하고
+                있어요.
+              </p>
+            ) : null}
             {course.places.map((place, index) => (
               <CourseListItem
                 key={place}
@@ -723,7 +976,9 @@ function FlowScreen({
             <section className="space-y-3 rounded-2xl bg-orange-50 p-4">
               <div>
                 <h2 className="type-body-sb-16">오늘의 여행 일기</h2>
-                <p className="type-body-r-14 mt-1 text-gray-500">코스에서 남기고 싶은 순간을 기록해 보세요.</p>
+                <p className="type-body-r-14 mt-1 text-gray-500">
+                  코스에서 남기고 싶은 순간을 기록해 보세요.
+                </p>
               </div>
               <textarea
                 aria-label="여행 일기"
@@ -745,7 +1000,9 @@ function FlowScreen({
                 {diaries[course.id] ? "일기 수정하기" : "일기 저장하기"}
               </Button>
               {diaries[course.id] ? (
-                <p className="type-caption-r-12 text-gray-500">일기를 저장했어요.</p>
+                <p className="type-caption-r-12 text-gray-500">
+                  일기를 저장했어요.
+                </p>
               ) : null}
             </section>
           ) : null}
@@ -791,39 +1048,53 @@ function FlowScreen({
       <AppShell tab="community">
         <Header title="커뮤니티" />
         <section className="space-y-4 px-5 py-5">
-          <div className="flex gap-2" role="group" aria-label="반려견 크기 필터">
-            {(["전체", "대형", "중형", "소형"] as const).map((filter) => (
-              <Chip
-                key={filter}
-                variant={communityFilter === filter ? "selected" : "light"}
-                onClick={() => setCommunityFilter(filter)}
-                aria-pressed={communityFilter === filter}
+          {!demoMode ? (
+            <EmptyState
+              title="커뮤니티 연결을 준비하고 있어요"
+              description="현재 서버에는 커뮤니티 목록과 저장 API가 아직 없습니다."
+            />
+          ) : (
+            <>
+              <div
+                className="flex gap-2"
+                role="group"
+                aria-label="반려견 크기 필터"
               >
-                {filter}
-              </Chip>
-            ))}
-          </div>
-          {communityCourses
-            .filter(
-              (item) =>
-                communityFilter === "전체" || item.dogSize === communityFilter
-            )
-            .map((item) => (
-            <button
-              key={item.id}
-              className="w-full text-left"
-              onClick={() => router.push(`/community/${item.id}`)}
-            >
-              <CourseCard
-                title={item.title}
-                hours={item.duration / 60}
-                spots={item.places.length}
-                variant={
-                  item.userId === user.id ? "community-y" : "community-n"
-                }
-              />
-            </button>
-            ))}
+                {(["전체", "대형", "중형", "소형"] as const).map((filter) => (
+                  <Chip
+                    key={filter}
+                    variant={communityFilter === filter ? "selected" : "light"}
+                    onClick={() => setCommunityFilter(filter)}
+                    aria-pressed={communityFilter === filter}
+                  >
+                    {filter}
+                  </Chip>
+                ))}
+              </div>
+              {communityCourses
+                .filter(
+                  (item) =>
+                    communityFilter === "전체" ||
+                    item.dogSize === communityFilter
+                )
+                .map((item) => (
+                  <button
+                    key={item.id}
+                    className="w-full text-left"
+                    onClick={() => router.push(`/community/${item.id}`)}
+                  >
+                    <CourseCard
+                      title={item.title}
+                      hours={item.duration / 60}
+                      spots={item.places.length}
+                      variant={
+                        item.userId === user.id ? "community-y" : "community-n"
+                      }
+                    />
+                  </button>
+                ))}
+            </>
+          )}
         </section>
       </AppShell>
     )
@@ -847,18 +1118,35 @@ function FlowScreen({
                 <button
                   key={item.id}
                   className="w-full text-left"
+                  aria-label={item.title}
                   onClick={() => router.push(`/archive/${item.id}`)}
                 >
-                  <CourseCard title={item.title} hours={item.duration / 60} spots={item.places.length} />
+                  <CourseCard
+                    title={item.title}
+                    hours={item.duration / 60}
+                    spots={item.places.length}
+                  />
                 </button>
               ))}
             </section>
           )}
           <section className="rounded-2xl bg-gray-50 p-4">
             <h2 className="type-body-sb-16">이달의 활동</h2>
-            <p className="type-body-r-14 mt-2 text-gray-500">완성한 코스 {courses.length}개 · 새로운 발자국을 남겨보세요.</p>
+            <p className="type-body-r-14 mt-2 text-gray-500">
+              완성한 코스 {courses.length}개 · 새로운 발자국을 남겨보세요.
+            </p>
           </section>
-          <Button size="full" variant="secondary" onClick={() => router.push("/report")}>
+          {!demoMode ? (
+            <p className="type-caption-r-12 text-gray-400">
+              발자국과 일기는 아직 서버에 저장되지 않고 현재 세션에만
+              유지됩니다.
+            </p>
+          ) : null}
+          <Button
+            size="full"
+            variant="secondary"
+            onClick={() => router.push("/report")}
+          >
             활동 리포트 보기
           </Button>
         </section>
@@ -882,7 +1170,9 @@ function FlowScreen({
               </div>
               <div className="rounded-xl bg-white p-3">
                 <dt className="type-caption-r-12 text-gray-400">남긴 일기</dt>
-                <dd className="type-head-sb-24 mt-1">{Object.keys(diaries).length}개</dd>
+                <dd className="type-head-sb-24 mt-1">
+                  {Object.keys(diaries).length}개
+                </dd>
               </div>
             </dl>
           </section>
@@ -890,8 +1180,13 @@ function FlowScreen({
             <h2 className="type-body-sb-16">뱃지</h2>
             <div className="mt-3 grid grid-cols-3 gap-2">
               {["첫 발자국", "산책 친구", "기록왕"].map((badge) => (
-                <div key={badge} className="rounded-xl border border-orange-100 p-3 text-center">
-                  <span aria-hidden="true" className="text-2xl">🐾</span>
+                <div
+                  key={badge}
+                  className="rounded-xl border border-orange-100 p-3 text-center"
+                >
+                  <span aria-hidden="true" className="text-2xl">
+                    🐾
+                  </span>
                   <p className="type-caption-r-12 mt-2">{badge}</p>
                 </div>
               ))}
@@ -917,7 +1212,7 @@ function FlowScreen({
             <div className="min-w-0 flex-1">
               <h1 className="type-head-sb-20">{user.dogName}</h1>
               <p className="type-body-r-14 text-gray-400">
-                {user.age} · 소형견
+                {user.age} · {activeDogSizeLabel}
               </p>
             </div>
             <Button
@@ -929,7 +1224,9 @@ function FlowScreen({
             </Button>
           </div>
           <div className="space-y-2">
-            <p className="type-caption-r-12 text-gray-400">보호자 {user.name}</p>
+            <p className="type-caption-r-12 text-gray-400">
+              보호자 {user.name}
+            </p>
             <ListRow
               label="약관 보기"
               onClick={() => router.push("/terms/service")}
@@ -951,12 +1248,37 @@ function FlowScreen({
           className="space-y-5 px-5 py-6"
           onSubmit={(event) => {
             event.preventDefault()
-            updateUser({
-              name: name.trim(),
-              age: age.trim(),
-              dogName: dogName.trim(),
-            })
-            router.push("/mypage")
+            if (demoMode) {
+              updateUser({
+                name: name.trim(),
+                age: age.trim(),
+                dogName: dogName.trim(),
+              })
+              router.push("/mypage")
+              return
+            }
+
+            if (!getAccessToken()) {
+              setProfileError("프로필을 수정하려면 카카오 로그인이 필요합니다.")
+              return
+            }
+
+            updateDog.mutate(
+              {
+                name: dogName.trim(),
+                age: Number(age.replace(/\D/g, "")),
+                size: dogSize,
+              },
+              {
+                onSuccess: (result) => {
+                  const nextAge =
+                    result.age === null ? "나이 미입력" : `${result.age}살`
+                  updateUser({ dogName: result.name, age: nextAge })
+                  queryClient.setQueryData(dogQueryKeys.me, result)
+                  router.push("/mypage")
+                },
+              }
+            )
           }}
         >
           <div className="flex justify-center">
@@ -969,13 +1291,21 @@ function FlowScreen({
             />
           </div>
           <label className="block space-y-2">
-            <span className="type-body-sb-14">보호자 이름</span>
+            <span className="type-body-sb-14">
+              {demoMode ? "보호자 이름" : "카카오 닉네임"}
+            </span>
             <TextField
               aria-label="보호자 이름"
               state="completed"
               value={name}
+              readOnly={!demoMode}
               onChange={(event) => setName(event.target.value)}
             />
+            {!demoMode ? (
+              <p className="type-caption-r-12 text-gray-400">
+                보호자 닉네임은 카카오 계정에서 관리해요.
+              </p>
+            ) : null}
           </label>
           <label className="block space-y-2">
             <span className="type-body-sb-14">반려견 이름</span>
@@ -996,13 +1326,50 @@ function FlowScreen({
               onChange={(event) => setAge(event.target.value)}
             />
           </label>
+          <fieldset className="space-y-3">
+            <legend className="type-body-sb-14">반려견 크기</legend>
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  ["SMALL", "소형"],
+                  ["MEDIUM", "중형"],
+                  ["LARGE", "대형"],
+                ] as const
+              ).map(([size, label]) => (
+                <ChoiceButton
+                  key={size}
+                  state={dogSize === size ? "selected" : "default"}
+                  aria-pressed={dogSize === size}
+                  onClick={() => setDogSize(size)}
+                >
+                  {label}
+                </ChoiceButton>
+              ))}
+            </div>
+          </fieldset>
           <Button
             size="full"
             type="submit"
-            disabled={!name.trim() || !dogName.trim() || !age.trim()}
+            disabled={
+              !name.trim() ||
+              !dogName.trim() ||
+              !age.replace(/\D/g, "") ||
+              (!demoMode && !hasAccessToken) ||
+              updateDog.isPending
+            }
           >
-            저장하기
+            {updateDog.isPending ? "저장 중" : "저장하기"}
           </Button>
+          {updateDog.isError ? (
+            <p role="alert" className="type-caption-r-12 text-red-600">
+              {updateDog.error.message}
+            </p>
+          ) : null}
+          {profileError ? (
+            <p role="alert" className="type-caption-r-12 text-red-600">
+              {profileError}
+            </p>
+          ) : null}
         </form>
       </Plain>
     )
@@ -1070,8 +1437,12 @@ function TermRow({
     </div>
   )
 }
-function findCourse(id: string | undefined, courses: Course[]) {
-  if (id === "edge-case")
+function findCourse(
+  id: string | undefined,
+  courses: Course[],
+  includeDemoCourses: boolean
+) {
+  if (includeDemoCourses && id === "edge-case")
     return {
       id,
       userId: "zero",
@@ -1082,7 +1453,9 @@ function findCourse(id: string | undefined, courses: Course[]) {
     }
   return (
     courses.find((item) => item.id === id) ??
-    communityCourses.find((item) => item.id === id)
+    (includeDemoCourses
+      ? communityCourses.find((item) => item.id === id)
+      : undefined)
   )
 }
 
