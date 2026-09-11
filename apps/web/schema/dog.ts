@@ -29,6 +29,7 @@ export const signupCompleteResponseSchema = z.object({
 })
 
 export type Dog = z.output<typeof dogSchema>
+export type DogSize = z.output<typeof dogSizeSchema>
 export type DogCreateRequest = z.input<typeof dogCreateRequestSchema>
 export type DogUpdateRequest = z.input<typeof dogUpdateRequestSchema>
 export type SignupCompleteResponse = z.output<

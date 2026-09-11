@@ -20,7 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "E2E=1 pnpm --filter web exec next dev --port 3001",
+    command:
+      "E2E=1 NEXT_PUBLIC_APP_MODE=demo pnpm --filter web exec next dev --port 3001",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     url: "http://127.0.0.1:3001",

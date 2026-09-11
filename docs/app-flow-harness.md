@@ -6,6 +6,31 @@
 2. Figma UI defines the visual treatment for each corresponding screen.
 3. Existing project tokens and reusable UI components define implementation conventions.
 
+## Runtime boundary
+
+The Harness is not an API specification. The live application uses the sibling
+backend's implemented contracts for the following behavior:
+
+| Product behavior               | Backend contract                 | Runtime status              |
+| ------------------------------ | -------------------------------- | --------------------------- |
+| Kakao sign-in                  | `POST /auth/kakao/login`         | Live API                    |
+| New dog registration           | `POST /dogs` with `signup_token` | Live API                    |
+| My dog profile                 | `GET /dogs/me`, `PATCH /dogs/me` | Live API                    |
+| Nearby recommendations         | `GET /api/v1/courses`            | Live API                    |
+| Course generation              | `POST /api/v1/courses`           | Live API                    |
+| My-course reload/detail lookup | No matching backend endpoint     | Session-only after creation |
+| Community ownership/save       | No matching backend endpoint     | Demo Harness only           |
+| Archive diary/report           | No matching backend endpoint     | Demo Harness only           |
+
+`NEXT_PUBLIC_APP_MODE=demo` exists only for deterministic Playwright coverage of
+the unsupported Harness branches. Production and ordinary local development use
+`live`; they must never silently fall back to generated mock data after an API
+failure.
+
+Browser API calls use the same-origin `/backend-api/` rewrite. Its server-side
+target is configured with `DOGMAP_API_ORIGIN` and defaults to the backend's
+documented `http://localhost:8000` address.
+
 ## Continuous completion loop
 
 Creating or updating a PR is a checkpoint, never a completion condition. Continue without waiting for user confirmation until every audited Harness node has a working route, state transition and test coverage.
@@ -14,12 +39,13 @@ For each remaining node:
 
 1. Inspect the exact Harness and UI Figma frame.
 2. Compare it with the current route, interaction and empty/error/ownership state.
-3. Implement the gap with shared components and centralized mock state.
+3. Implement the gap with the backend API when a contract exists; use centralized
+   demo state only for explicitly unsupported contracts.
 4. Add or update Vitest state coverage and Playwright user-flow coverage.
 5. Run typecheck and relevant tests. At feature checkpoints also run lint and build.
 6. Commit and push the checkpoint, then immediately start the next audit item.
 
-## Audit checklist
+## Harness UI audit checklist
 
 - [x] Entry, terms, onboarding, location prompt and home
 - [x] Course empty/list/generation/loading/detail/edge result/map spot interaction
@@ -27,15 +53,21 @@ For each remaining node:
 - [x] Community ownership and save-to-my-course flow
 - [x] Archive footprint list, persisted course diary entry and activity report flow
 - [x] My page, edit, reusable terms, error and 404
-- [x] Final Figma frame-by-frame visual audit and full verification suite
+- [x] Final Figma frame-by-frame visual audit
+- [x] Backend contract audit and live API boundary correction
+- [ ] Backend support for own-course detail/reload, community save, archive and diary
 
 ## Figma node coverage
 
-| Flow | Figma nodes | Implemented routes/states |
-| --- | --- | --- |
-| Entry and onboarding | `54:235`, `56:260`, `29:131`, `54:167` | `/login`, `/terms`, `/terms/[slug]`, `/onboarding/1`, `/onboarding/2` |
-| Home and location permission | `65:541`, `74:565`, `141:93`, `143:213`, `180:207` | `/`, permission prompt, course/community entry actions |
-| Course | `74:643`, `74:667`, `74:728`, `288:446`, `305:492`, `74:812`, `74:872`, `241:1180` | `/courses`, `/courses/new`, `/courses/generating`, `/courses/[courseId]`, validation, edge result and spot detail |
-| Community | `225:457`, `241:774`, `241:1061`, `241:1109` | `/community`, `/community/[courseId]`, size filter, ownership and save states |
-| Archive and report | `205:235`, `205:208`, `214:905`, `205:97`, `205:144`, `241:334` | `/archive`, `/archive/[courseId]`, persisted diary and `/report` |
-| My and recovery | `95:338`, `397:528`, `242:1455`, `78:899`, `78:913` | `/mypage`, `/mypage/edit`, reusable terms, 404 and error recovery |
+| Flow                         | Figma nodes                                                                        | Implemented routes/states                                                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Entry and onboarding         | `54:235`, `56:260`, `29:131`, `54:167`                                             | `/login`, `/terms`, `/terms/[slug]`, `/onboarding/1`, `/onboarding/2`                                             |
+| Home and location permission | `65:541`, `74:565`, `141:93`, `143:213`, `180:207`                                 | `/`, permission prompt, course/community entry actions                                                            |
+| Course                       | `74:643`, `74:667`, `74:728`, `288:446`, `305:492`, `74:812`, `74:872`, `241:1180` | `/courses`, `/courses/new`, `/courses/generating`, `/courses/[courseId]`, validation, edge result and spot detail |
+| Community                    | `225:457`, `241:774`, `241:1061`, `241:1109`                                       | `/community`, `/community/[courseId]`, size filter, ownership and save states                                     |
+| Archive and report           | `205:235`, `205:208`, `214:905`, `205:97`, `205:144`, `241:334`                    | `/archive`, `/archive/[courseId]`, persisted diary and `/report`                                                  |
+| My and recovery              | `95:338`, `397:528`, `242:1455`, `78:899`, `78:913`                                | `/mypage`, `/mypage/edit`, reusable terms, 404 and error recovery                                                 |
+
+The table above records Harness route coverage, not backend completeness. Rows
+that depend on absent backend endpoints remain demo-only as listed in Runtime
+boundary.

@@ -10,6 +10,10 @@ export type Course = {
   startTime?: string
   endTime?: string
   dogSize?: "소형" | "중형" | "대형"
+  path?: [number, number][]
+  startCoordinates?: { lat: number; lng: number }
+  summaryOnly?: boolean
+  placeCount?: number
 }
 
 export const courseDurations = [60, 90, 120] as const

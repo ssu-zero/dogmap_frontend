@@ -18,6 +18,12 @@ cp apps/web/.env.example apps/web/.env.local
 pnpm dev
 ```
 
+The web app calls the FastAPI server through the same-origin `/backend-api/`
+rewrite. The backend runs on `http://localhost:8000` by default, so it does not
+need a permissive browser CORS policy for local development. For Kakao login,
+set the public REST API key and make `NEXT_PUBLIC_KAKAO_REDIRECT_URI` identical
+to the backend's `KAKAO_REDIRECT_URI` value.
+
 ## Adding components
 
 To add components to your app, run the following command at the root of your `web` app:
@@ -33,5 +39,5 @@ This will place the ui components in the `packages/ui/src/components` directory.
 To use the components in your app, import them from the `ui` package.
 
 ```tsx
-import { Button } from "@workspace/ui/components/button";
+import { Button } from "@workspace/ui/components/button"
 ```
