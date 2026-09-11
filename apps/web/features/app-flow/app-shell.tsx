@@ -1,6 +1,9 @@
 "use client"
 
-import { BottomNavigation } from "@workspace/ui/components/navigation"
+import {
+  BottomNavigation,
+  type NavigationItem,
+} from "@workspace/ui/components/navigation"
 import { usePathname, useRouter } from "next/navigation"
 import type { ReactNode } from "react"
 
@@ -11,6 +14,23 @@ const tabs = {
   community: "/community",
   mypage: "/mypage",
 } as const
+
+const communityNavigationItems: NavigationItem[] = [
+  { value: "home", label: "홈", icon: "homeLine", activeIcon: "homeFill" },
+  { value: "course", label: "코스", icon: "location", activeIcon: "location" },
+  {
+    value: "community",
+    label: "커뮤니티",
+    icon: "chatLine",
+    activeIcon: "chatFill",
+  },
+  {
+    value: "mypage",
+    label: "마이페이지",
+    icon: "profileLine",
+    activeIcon: "profileFill",
+  },
+]
 
 function AppShell({
   children,
@@ -28,6 +48,7 @@ function AppShell({
       {tab ? (
         <BottomNavigation
           value={tab}
+          items={tab === "community" ? communityNavigationItems : undefined}
           onValueChange={(value) =>
             router.push(tabs[value as keyof typeof tabs])
           }

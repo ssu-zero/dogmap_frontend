@@ -30,3 +30,17 @@ test("shows own-course actions instead of a save action", async ({ page }) => {
   await page.getByRole("button", { name: "목록 닫기" }).click()
   await expect(page.getByText("내 코스 관리")).toHaveCount(0)
 })
+
+test("filters community courses by dog size and keeps the community tab active", async ({
+  page,
+}) => {
+  await page.goto("/community")
+
+  await expect(page.getByRole("button", { name: "커뮤니티" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  )
+  await page.getByText("소형", { exact: true }).click()
+  await expect(page.getByText("서울숲 반려견 산책 코스")).toBeVisible()
+  await expect(page.getByText("제로의 주말 한강 코스")).toHaveCount(0)
+})

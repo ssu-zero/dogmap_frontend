@@ -9,6 +9,7 @@ export type Course = {
   date?: string
   startTime?: string
   endTime?: string
+  dogSize?: "소형" | "중형" | "대형"
 }
 
 export const courseDurations = [60, 90, 120] as const
@@ -110,6 +111,7 @@ export const communityCourses: Course[] = [
     title: "서울숲 반려견 산책 코스",
     duration: 90,
     places: ["서울숲", "댕댕이 카페", "성수 산책길"],
+    dogSize: "소형",
   },
   {
     id: "zero-weekend",
@@ -117,5 +119,6 @@ export const communityCourses: Course[] = [
     title: "제로의 주말 한강 코스",
     duration: 120,
     places: ["망원 한강공원", "반려견 놀이터", "망원시장"],
+    dogSize: "중형",
   },
 ]

@@ -90,6 +90,9 @@ function FlowScreen({
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
   const [draftDiaries, setDraftDiaries] = useState<Record<string, string>>({})
+  const [communityFilter, setCommunityFilter] = useState<
+    "전체" | "소형" | "중형" | "대형"
+  >("전체")
 
   const course = findCourse(courseId, courses)
   const ownCourse = course?.userId === user.id
@@ -774,8 +777,25 @@ function FlowScreen({
     return (
       <AppShell tab="community">
         <Header title="커뮤니티" />
-        <section className="space-y-3 px-5 py-5">
-          {communityCourses.map((item) => (
+        <section className="space-y-4 px-5 py-5">
+          <div className="flex gap-2" role="group" aria-label="반려견 크기 필터">
+            {(["전체", "대형", "중형", "소형"] as const).map((filter) => (
+              <Chip
+                key={filter}
+                variant={communityFilter === filter ? "selected" : "light"}
+                onClick={() => setCommunityFilter(filter)}
+                aria-pressed={communityFilter === filter}
+              >
+                {filter}
+              </Chip>
+            ))}
+          </div>
+          {communityCourses
+            .filter(
+              (item) =>
+                communityFilter === "전체" || item.dogSize === communityFilter
+            )
+            .map((item) => (
             <button
               key={item.id}
               className="w-full text-left"
@@ -790,7 +810,7 @@ function FlowScreen({
                 }
               />
             </button>
-          ))}
+            ))}
         </section>
       </AppShell>
     )
