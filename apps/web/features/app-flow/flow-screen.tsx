@@ -881,18 +881,22 @@ function FlowScreen({
               height={64}
               className="size-16 rounded-full object-cover"
             />
-            <div>
-              <h1 className="type-head-sb-20">{user.name}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="type-head-sb-20">{user.dogName}</h1>
               <p className="type-body-r-14 text-gray-400">
-                {user.dogName} · {user.age}
+                {user.age} · 소형견
               </p>
             </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => router.push("/mypage/edit")}
+            >
+              수정
+            </Button>
           </div>
           <div className="space-y-2">
-            <ListRow
-              label="프로필 수정"
-              onClick={() => router.push("/mypage/edit")}
-            />
+            <p className="type-caption-r-12 text-gray-400">보호자 {user.name}</p>
             <ListRow
               label="약관 보기"
               onClick={() => router.push("/terms/service")}

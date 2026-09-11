@@ -2,15 +2,16 @@ import { expect, test } from "@playwright/test"
 
 test("edits and reflects profile information", async ({ page }) => {
   await page.goto("/mypage")
-  await page.getByRole("button", { name: "프로필 수정" }).click()
+  await page.getByRole("button", { name: "수정" }).click()
 
   await page.getByRole("textbox", { name: "보호자 이름" }).fill("새 보호자")
   await page.getByRole("textbox", { name: "반려견 이름 수정" }).fill("보리")
   await page.getByRole("textbox", { name: "반려견 나이" }).fill("4살")
   await page.getByRole("button", { name: "저장하기" }).click()
 
-  await expect(page.getByRole("heading", { name: "새 보호자" })).toBeVisible()
-  await expect(page.getByText("보리 · 4살")).toBeVisible()
+  await expect(page.getByRole("heading", { name: "보리" })).toBeVisible()
+  await expect(page.getByText("4살 · 소형견")).toBeVisible()
+  await expect(page.getByText("보호자 새 보호자")).toBeVisible()
 })
 
 test("opens a reusable term detail and returns to my page", async ({
