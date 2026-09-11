@@ -109,26 +109,39 @@ function FlowScreen({
   if (screen === "login") {
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col justify-between px-5 py-12">
-          <div className="space-y-4">
+        <section className="flex min-h-svh flex-col px-5 py-12">
+          <div className="flex flex-1 flex-col items-center justify-center pb-16 text-center">
+            <Image
+              src="/img/dog.png"
+              alt="여행 가방을 든 반려견"
+              width={153}
+              height={180}
+              className="h-[180px] w-[153px] object-contain"
+            />
             <Image
               src="/logo/with_paw.png"
               alt="개동여지도"
-              width={160}
-              height={64}
-              className="h-auto w-40"
+              width={180}
+              height={44}
+              className="mt-7 h-11 w-[180px]"
             />
-            <h1 className="type-head-sb-24">개동여지도</h1>
-            <p className="type-body-r-16 text-gray-400">
-              반려견과 떠나는 맞춤 여행 코스
+            <h1 className="type-head-sb-24 mt-5">개동여지도</h1>
+            <p className="type-body-r-16 mt-3 text-gray-500">
+              반려동물과 떠나는
+              <br />
+              맞춤 여행 코스
             </p>
           </div>
-          <div className="space-y-3">
-            <Button size="full" onClick={() => router.push("/terms")}>
+          <div className="space-y-2">
+            <Button
+              size="full"
+              className="rounded-lg bg-[#fee500] text-gray-900 hover:bg-[#fee500]"
+              onClick={() => router.push("/terms")}
+            >
               카카오 로그인
             </Button>
             <Button
-              variant="secondary"
+              variant="text"
               size="full"
               onClick={() => router.push(termsAgreed ? "/" : "/terms")}
             >
