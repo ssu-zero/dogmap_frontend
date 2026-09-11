@@ -8,6 +8,38 @@ export type Course = {
   edge?: boolean
 }
 
+export const courseDurations = [60, 90, 120] as const
+export type CourseDuration = (typeof courseDurations)[number]
+
+export const courseThemes = ["산책", "카페", "활동"] as const
+export type CourseTheme = (typeof courseThemes)[number]
+
+export type CourseDraft = {
+  title: string
+  duration: CourseDuration | null
+  themes: CourseTheme[]
+}
+
+export const initialCourseDraft: CourseDraft = {
+  title: "",
+  duration: null,
+  themes: [],
+}
+
+export function isCourseDraftComplete(draft: CourseDraft) {
+  return (
+    Boolean(draft.title.trim()) &&
+    Boolean(draft.duration) &&
+    draft.themes.length > 0
+  )
+}
+
+export function toggleCourseTheme(themes: CourseTheme[], theme: CourseTheme) {
+  return themes.includes(theme)
+    ? themes.filter((item) => item !== theme)
+    : [...themes, theme]
+}
+
 export const currentUser = {
   id: "zero",
   name: "제로와 보호자",

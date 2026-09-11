@@ -20,9 +20,13 @@ import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
 import {
   communityCourses,
+  courseDurations,
+  courseThemes,
   isDogInfoComplete,
   isDogNameValid,
+  isCourseDraftComplete,
   requiredTermKeys,
+  toggleCourseTheme,
   type Course,
   type RequiredTermKey,
 } from "./mock-data"
@@ -55,13 +59,13 @@ function FlowScreen({
   const {
     courses,
     createCourse,
-    draftTitle,
+    courseDraft,
     dismissLocationPermissionPrompt,
     completeOnboarding,
     locationPermissionPromptOpen,
     onboarding,
     saveCourse,
-    setDraftTitle,
+    updateCourseDraft,
     setAllTerms,
     setTerm,
     terms,
@@ -70,7 +74,6 @@ function FlowScreen({
     updateUser,
     user,
   } = useAppFlow()
-  const [title, setTitle] = useState(draftTitle)
   const [saved, setSaved] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [name, setName] = useState(user.name)
@@ -82,11 +85,11 @@ function FlowScreen({
   useEffect(() => {
     if (screen !== "generating") return
     const timeout = window.setTimeout(() => {
-      const generated = createCourse(draftTitle)
+      const generated = createCourse(courseDraft)
       router.replace(`/courses/${generated.id}`)
     }, 1200)
     return () => window.clearTimeout(timeout)
-  }, [createCourse, draftTitle, router, screen])
+  }, [courseDraft, createCourse, router, screen])
 
   if (screen === "login") {
     return (
@@ -440,7 +443,7 @@ function FlowScreen({
           className="space-y-6 px-5 py-6"
           onSubmit={(event) => {
             event.preventDefault()
-            setDraftTitle(title)
+            if (!isCourseDraftComplete(courseDraft)) return
             router.push("/courses/generating")
           }}
         >
@@ -450,24 +453,74 @@ function FlowScreen({
               조건을 선택하면 코스를 추천해 드릴게요.
             </p>
           </div>
-          <TextField
-            state={title ? "completed" : "writing"}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="코스 이름"
-          />
-          <div className="grid grid-cols-3 gap-2">
-            <ChoiceButton state="selected">
-              산책<small>60~90분</small>
-            </ChoiceButton>
-            <ChoiceButton>
-              카페<small>여유롭게</small>
-            </ChoiceButton>
-            <ChoiceButton>
-              활동<small>신나게</small>
-            </ChoiceButton>
-          </div>
-          <Button size="full" type="submit" disabled={!title.trim()}>
+          <label className="block space-y-2">
+            <span className="type-body-sb-16">코스 이름*</span>
+            <TextField
+              aria-label="코스 이름"
+              state={courseDraft.title ? "completed" : "writing"}
+              value={courseDraft.title}
+              maxLength={30}
+              onChange={(event) =>
+                updateCourseDraft({ title: event.target.value })
+              }
+              placeholder="코스 이름"
+            />
+          </label>
+          <fieldset className="space-y-3">
+            <legend className="type-body-sb-16">산책 시간*</legend>
+            <div className="grid grid-cols-3 gap-2">
+              {courseDurations.map((duration) => (
+                <ChoiceButton
+                  key={duration}
+                  state={
+                    courseDraft.duration === duration ? "selected" : "default"
+                  }
+                  aria-pressed={courseDraft.duration === duration}
+                  onClick={() => updateCourseDraft({ duration })}
+                  description="추천"
+                >
+                  {duration}분
+                </ChoiceButton>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="space-y-3">
+            <legend className="type-body-sb-16">원하는 코스*</legend>
+            <div className="grid grid-cols-3 gap-2">
+              {courseThemes.map((theme) => {
+                const selected = courseDraft.themes.includes(theme)
+                return (
+                  <ChoiceButton
+                    key={theme}
+                    state={selected ? "selected" : "default"}
+                    aria-pressed={selected}
+                    onClick={() =>
+                      updateCourseDraft({
+                        themes: toggleCourseTheme(courseDraft.themes, theme),
+                      })
+                    }
+                    description={
+                      theme === "산책"
+                        ? "가볍게"
+                        : theme === "카페"
+                          ? "여유롭게"
+                          : "신나게"
+                    }
+                  >
+                    {theme}
+                  </ChoiceButton>
+                )
+              })}
+            </div>
+          </fieldset>
+          <p className="type-caption-r-12 text-gray-400">
+            시간과 원하는 코스를 모두 선택하면 추천을 시작할 수 있어요.
+          </p>
+          <Button
+            size="full"
+            type="submit"
+            disabled={!isCourseDraftComplete(courseDraft)}
+          >
             코스 생성하기
           </Button>
         </form>
@@ -557,6 +610,15 @@ function FlowScreen({
               />
             ))}
           </section>
+          {screen === "course-detail" && ownCourse ? (
+            <Button
+              size="full"
+              variant="secondary"
+              onClick={() => router.push("/courses")}
+            >
+              내 코스 목록 보기
+            </Button>
+          ) : null}
           {screen === "community-detail" && !ownCourse ? (
             <Button
               size="full"

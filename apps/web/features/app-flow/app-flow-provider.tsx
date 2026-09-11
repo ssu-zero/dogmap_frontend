@@ -10,8 +10,10 @@ import {
 
 import {
   currentUser,
+  initialCourseDraft,
   initialOnboardingProfile,
   type Course,
+  type CourseDraft,
   type OnboardingProfile,
   type RequiredTermKey,
 } from "./mock-data"
@@ -25,16 +27,16 @@ type AppFlowState = {
   termsAgreed: boolean
   onboarding: OnboardingProfile
   locationPermissionPromptOpen: boolean
-  draftTitle: string
+  courseDraft: CourseDraft
   updateUser: (updates: Partial<typeof currentUser>) => void
-  createCourse: (title: string) => Course
+  createCourse: (draft: CourseDraft) => Course
   saveCourse: (course: Course) => void
   setTerm: (term: RequiredTermKey, value: boolean) => void
   setAllTerms: (value: boolean) => void
   updateOnboarding: (updates: Partial<OnboardingProfile>) => void
   completeOnboarding: () => void
   dismissLocationPermissionPrompt: () => void
-  setDraftTitle: (value: string) => void
+  updateCourseDraft: (updates: Partial<CourseDraft>) => void
 }
 
 const AppFlowContext = createContext<AppFlowState | null>(null)
@@ -50,7 +52,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
   const [onboarding, setOnboarding] = useState(initialOnboardingProfile)
   const [locationPermissionPromptOpen, setLocationPermissionPromptOpen] =
     useState(false)
-  const [draftTitle, setDraftTitle] = useState("제로와 함께하는 주말 산책")
+  const [courseDraft, setCourseDraft] = useState(initialCourseDraft)
 
   const value = useMemo<AppFlowState>(
     () => ({
@@ -60,16 +62,21 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       termsAgreed: Object.values(terms).every(Boolean),
       onboarding,
       locationPermissionPromptOpen,
-      draftTitle,
+      courseDraft,
       updateUser: (updates) =>
         setUser((previous) => ({ ...previous, ...updates })),
-      createCourse: (title) => {
+      createCourse: (draft) => {
         const course: Course = {
           id: `generated-${Date.now()}`,
           userId: user.id,
-          title,
-          duration: 80,
-          places: ["출발지 주변 공원", "반려견 동반 카페", "휴식 스팟"],
+          title: draft.title.trim(),
+          duration: draft.duration ?? 90,
+          places: [
+            "출발지 주변 공원",
+            ...(draft.themes.includes("카페") ? ["반려견 동반 카페"] : []),
+            ...(draft.themes.includes("활동") ? ["반려견 놀이터"] : []),
+            "휴식 스팟",
+          ],
         }
         setCourses((previous) => [course, ...previous])
         return course
@@ -95,9 +102,17 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       },
       dismissLocationPermissionPrompt: () =>
         setLocationPermissionPromptOpen(false),
-      setDraftTitle,
+      updateCourseDraft: (updates) =>
+        setCourseDraft((previous) => ({ ...previous, ...updates })),
     }),
-    [courses, draftTitle, locationPermissionPromptOpen, onboarding, terms, user]
+    [
+      courseDraft,
+      courses,
+      locationPermissionPromptOpen,
+      onboarding,
+      terms,
+      user,
+    ]
   )
 
   return (
