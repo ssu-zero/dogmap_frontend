@@ -1,0 +1,81 @@
+import { describe, expect, it } from "vitest"
+
+import {
+  apiCourseToFlowCourse,
+  courseDraftToApiRequest,
+  onboardingToDogCreate,
+} from "./api-mappers"
+
+describe("app-flow API mappers", () => {
+  it("maps onboarding values to the backend dog contract", () => {
+    expect(
+      onboardingToDogCreate(
+        { dogName: " 몽이 ", dogSize: "medium", birthYear: "2023" },
+        2026
+      )
+    ).toEqual({ name: "몽이", size: "MEDIUM", age: 3, image_url: null })
+  })
+
+  it("maps course themes and coordinates to the backend create contract", () => {
+    expect(
+      courseDraftToApiRequest(
+        {
+          title: " 성수 산책 ",
+          date: "2026-09-14",
+          startTime: "10:00",
+          endTime: "12:00",
+          startLocation: "현재 위치",
+          duration: 90,
+          themes: ["산책", "카페"],
+        },
+        { lat: 37.5, lng: 127.1 }
+      )
+    ).toEqual({
+      start_lat: 37.5,
+      start_lng: 127.1,
+      target_duration_minutes: 90,
+      category_targets: [
+        { category: "WALK", count: 1 },
+        { category: "CAFE", count: 1 },
+      ],
+      title: "성수 산책",
+    })
+  })
+
+  it("keeps a created API course available to the flow UI", () => {
+    expect(
+      apiCourseToFlowCourse(
+        {
+          course_id: 42,
+          title: "서버 코스",
+          start_lat: 37.5,
+          start_lng: 127.1,
+          total_distance_meters: 1200,
+          total_duration_minutes: 61.5,
+          path: [[37.5, 127.1]],
+          places: [
+            {
+              place_id: 1,
+              name: "서울숲",
+              category: "PARK",
+              image_url: null,
+              lat: 37.5,
+              lng: 127.1,
+              sequence: 1,
+              stay_minutes: 20,
+              travel_minutes: 10,
+              travel_distance_meters: 300,
+            },
+          ],
+        },
+        "42"
+      )
+    ).toMatchObject({
+      id: "42",
+      userId: "42",
+      title: "서버 코스",
+      duration: 62,
+      places: ["서울숲"],
+    })
+  })
+})
