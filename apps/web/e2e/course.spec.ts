@@ -62,7 +62,12 @@ test("keeps an archive route and diary interaction available after creating a co
   await expect(page.getByRole("heading", { name: "제로의 발자국" })).toBeVisible()
   await page.getByRole("button", { name: "제로의 발자국" }).click()
   await page.getByRole("textbox", { name: "여행 일기" }).fill("서울숲에서 즐겁게 산책했다.")
-  await expect(page.getByRole("button", { name: "일기 저장하기" })).toBeEnabled()
+  await page.getByRole("button", { name: "일기 저장하기" }).click()
+  await expect(page.getByText("일기를 저장했어요.")).toBeVisible()
+  await page.getByRole("button", { name: "뒤로 가기" }).click()
+  await page.getByRole("button", { name: "활동 리포트 보기" }).click()
+  await expect(page.getByRole("heading", { name: "이번 달 산책 리포트" })).toBeVisible()
+  await expect(page.getByText("1개", { exact: true })).toHaveCount(2)
 })
 
 test("shows the reduced-place edge-case result", async ({ page }) => {

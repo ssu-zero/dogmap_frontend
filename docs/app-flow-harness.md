@@ -25,6 +25,6 @@ For each remaining node:
 - [x] Course empty/list/generation/loading/detail/edge result/map spot interaction
 - [x] Course request inputs: date, start/end time, start location and visit themes
 - [x] Community ownership and save-to-my-course flow
-- [x] Archive footprint list and course diary entry flow
+- [x] Archive footprint list, persisted course diary entry and activity report flow
 - [x] My page, edit, reusable terms, error and 404
 - [ ] Final Figma frame-by-frame visual audit and full verification suite

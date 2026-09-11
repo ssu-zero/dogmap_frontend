@@ -28,6 +28,7 @@ type AppFlowState = {
   onboarding: OnboardingProfile
   locationPermissionPromptOpen: boolean
   courseDraft: CourseDraft
+  diaries: Record<string, string>
   updateUser: (updates: Partial<typeof currentUser>) => void
   createCourse: (draft: CourseDraft) => Course
   saveCourse: (course: Course) => void
@@ -37,6 +38,7 @@ type AppFlowState = {
   completeOnboarding: () => void
   dismissLocationPermissionPrompt: () => void
   updateCourseDraft: (updates: Partial<CourseDraft>) => void
+  saveDiary: (courseId: string, body: string) => void
 }
 
 const AppFlowContext = createContext<AppFlowState | null>(null)
@@ -53,6 +55,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
   const [locationPermissionPromptOpen, setLocationPermissionPromptOpen] =
     useState(false)
   const [courseDraft, setCourseDraft] = useState(initialCourseDraft)
+  const [diaries, setDiaries] = useState<Record<string, string>>({})
 
   const value = useMemo<AppFlowState>(
     () => ({
@@ -63,6 +66,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       onboarding,
       locationPermissionPromptOpen,
       courseDraft,
+      diaries,
       updateUser: (updates) =>
         setUser((previous) => ({ ...previous, ...updates })),
       createCourse: (draft) => {
@@ -107,9 +111,12 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
         setLocationPermissionPromptOpen(false),
       updateCourseDraft: (updates) =>
         setCourseDraft((previous) => ({ ...previous, ...updates })),
+      saveDiary: (courseId, body) =>
+        setDiaries((previous) => ({ ...previous, [courseId]: body.trim() })),
     }),
     [
       courseDraft,
+      diaries,
       courses,
       locationPermissionPromptOpen,
       onboarding,

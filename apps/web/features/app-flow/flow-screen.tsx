@@ -48,6 +48,7 @@ type Screen =
   | "community-detail"
   | "archive"
   | "archive-detail"
+  | "report"
   | "mypage"
   | "mypage-edit"
   | "error"
@@ -71,6 +72,8 @@ function FlowScreen({
     locationPermissionPromptOpen,
     onboarding,
     saveCourse,
+    saveDiary,
+    diaries,
     updateCourseDraft,
     setAllTerms,
     setTerm,
@@ -86,7 +89,7 @@ function FlowScreen({
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
-  const [diary, setDiary] = useState("")
+  const [draftDiaries, setDraftDiaries] = useState<Record<string, string>>({})
 
   const course = findCourse(courseId, courses)
   const ownCourse = course?.userId === user.id
@@ -464,10 +467,12 @@ function FlowScreen({
             router.push("/courses/generating")
           }}
         >
-          <div>
-            <h1 className="type-head-sb-24">코스 만들기</h1>
-            <p className="type-body-r-14 mt-2 text-gray-400">
-              {user.dogName}에게 맞는 여행 조건을 알려주세요.
+          <div className="rounded-2xl bg-gray-100 px-5 py-5">
+            <p className="type-body-sb-16">
+              {user.dogName} · {user.age} 기준으로 짜드려요
+            </p>
+            <p className="type-body-r-14 mt-1 text-gray-400">
+              여행할 날짜와 출발 정보를 알려주세요.
             </p>
           </div>
           <label className="block space-y-2">
@@ -544,7 +549,7 @@ function FlowScreen({
             </div>
           </fieldset>
           <fieldset className="space-y-3">
-            <legend className="type-body-sb-16">원하는 코스*</legend>
+            <legend className="type-body-sb-16">어떤 곳을 들를까요?*</legend>
             <div className="grid grid-cols-3 gap-2">
               {courseThemes.map((theme) => {
                 const selected = courseDraft.themes.includes(theme)
@@ -614,6 +619,7 @@ function FlowScreen({
           <p className="p-5">코스를 찾을 수 없어요.</p>
         </Plain>
       )
+    const diary = draftDiaries[course.id] ?? diaries[course.id] ?? ""
     return (
       <Plain>
         <Header
@@ -708,9 +714,23 @@ function FlowScreen({
                 className="type-body-r-14 min-h-28 w-full rounded-xl border border-gray-150 bg-white p-3 focus:outline-none"
                 placeholder="오늘 {user.dogName}와 함께한 이야기를 남겨보세요."
                 value={diary}
-                onChange={(event) => setDiary(event.target.value)}
+                onChange={(event) =>
+                  setDraftDiaries((previous) => ({
+                    ...previous,
+                    [course.id]: event.target.value,
+                  }))
+                }
               />
-              <Button size="full" disabled={!diary.trim()}>일기 저장하기</Button>
+              <Button
+                size="full"
+                disabled={!diary.trim()}
+                onClick={() => saveDiary(course.id, diary)}
+              >
+                {diaries[course.id] ? "일기 수정하기" : "일기 저장하기"}
+              </Button>
+              {diaries[course.id] ? (
+                <p className="type-caption-r-12 text-gray-500">일기를 저장했어요.</p>
+              ) : null}
             </section>
           ) : null}
           {screen === "course-detail" && ownCourse ? (
@@ -804,6 +824,45 @@ function FlowScreen({
           <section className="rounded-2xl bg-gray-50 p-4">
             <h2 className="type-body-sb-16">이달의 활동</h2>
             <p className="type-body-r-14 mt-2 text-gray-500">완성한 코스 {courses.length}개 · 새로운 발자국을 남겨보세요.</p>
+          </section>
+          <Button size="full" variant="secondary" onClick={() => router.push("/report")}>
+            활동 리포트 보기
+          </Button>
+        </section>
+      </AppShell>
+    )
+
+  if (screen === "report")
+    return (
+      <AppShell tab="archive">
+        <section className="space-y-6 px-5 py-6">
+          <div>
+            <h1 className="type-head-sb-24">{user.dogName}의 발자국</h1>
+            <p className="type-body-sb-16 mt-2">지금까지의 여정</p>
+          </div>
+          <section className="rounded-2xl bg-gray-50 p-5">
+            <h2 className="type-body-sb-16">이번 달 산책 리포트</h2>
+            <dl className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-white p-3">
+                <dt className="type-caption-r-12 text-gray-400">완성한 코스</dt>
+                <dd className="type-head-sb-24 mt-1">{courses.length}개</dd>
+              </div>
+              <div className="rounded-xl bg-white p-3">
+                <dt className="type-caption-r-12 text-gray-400">남긴 일기</dt>
+                <dd className="type-head-sb-24 mt-1">{Object.keys(diaries).length}개</dd>
+              </div>
+            </dl>
+          </section>
+          <section>
+            <h2 className="type-body-sb-16">뱃지</h2>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {["첫 발자국", "산책 친구", "기록왕"].map((badge) => (
+                <div key={badge} className="rounded-xl border border-orange-100 p-3 text-center">
+                  <span aria-hidden="true" className="text-2xl">🐾</span>
+                  <p className="type-caption-r-12 mt-2">{badge}</p>
+                </div>
+              ))}
+            </div>
           </section>
         </section>
       </AppShell>
