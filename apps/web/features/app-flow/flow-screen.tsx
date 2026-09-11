@@ -80,6 +80,7 @@ function FlowScreen({
   } = useAppFlow()
   const [saved, setSaved] = useState(false)
   const [listOpen, setListOpen] = useState(false)
+  const [selectedPlace, setSelectedPlace] = useState<string | null>(null)
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
@@ -414,9 +415,12 @@ function FlowScreen({
         <section className="flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-6">
           {courses.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-8">
-              <EmptyState />
+              <EmptyState
+                title="아직 만든 코스가 없어요"
+                description="제로와 떠날 첫 여행 코스를 지금 만들어보세요"
+              />
               <Button size="full" onClick={() => router.push("/courses/new")}>
-                새 코스 만들기
+                첫 코스 만들기
               </Button>
             </div>
           ) : (
@@ -595,9 +599,37 @@ function FlowScreen({
               약 {course.duration}분 · {course.places.length}곳
             </p>
           </div>
-          <div className="flex h-44 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
-            지도 영역
-          </div>
+          <button
+            type="button"
+            className="flex h-44 w-full items-center justify-center rounded-2xl bg-gray-100 text-gray-400"
+            aria-label="코스 지도 보기"
+            onClick={() => setSelectedPlace(course.places[0] ?? null)}
+          >
+            지도에서 스팟 보기
+          </button>
+          {selectedPlace ? (
+            <section
+              className="rounded-xl bg-red-50 p-4"
+              role="dialog"
+              aria-label="스팟 상세"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="type-body-sb-16">{selectedPlace}</p>
+                  <p className="type-body-r-14 mt-1 text-gray-500">
+                    반려견 동반 가능 · 코스에 포함된 추천 스팟이에요.
+                  </p>
+                </div>
+                <Button
+                  variant="text"
+                  size="sm"
+                  onClick={() => setSelectedPlace(null)}
+                >
+                  닫기
+                </Button>
+              </div>
+            </section>
+          ) : null}
           {listOpen ? (
             <div className="rounded-xl bg-gray-50 p-4">
               <p className="type-body-sb-14">내 코스 관리</p>
