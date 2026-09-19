@@ -413,6 +413,20 @@ test("does not silently create a demo course for a signed-out live user", async 
   await expect(page).toHaveURL(/\/login$/)
 })
 
+test("uses the login entry screen for a signed-out live visitor", async ({
+  page,
+}) => {
+  await useLiveApiMode(page)
+  await page.goto("/")
+
+  await expect(
+    page.getByRole("button", { name: "카카오 로그인" })
+  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "동반 가능한 모든 곳" })).toHaveCount(
+    0
+  )
+})
+
 test("does not present demo community data as live server data", async ({
   page,
 }) => {
