@@ -82,6 +82,12 @@ export const courseSaveStatusSchema = z.object({
   save_count: z.number().int(),
 })
 
+export const coursePlacesReplaceRequestSchema = z.object({
+  places: z.array(coursePlaceSchema),
+  path: z.array(z.tuple([z.number(), z.number()])),
+  ended_at: z.string().datetime({ offset: true }).nullable().optional(),
+})
+
 export const nearbyCoursesParamsSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
@@ -95,3 +101,6 @@ export type Course = z.output<typeof courseSchema>
 export type NearbyCoursesParams = z.input<typeof nearbyCoursesParamsSchema>
 export type NearbyCourse = z.output<typeof courseSummarySchema>
 export type CourseSummary = z.output<typeof courseSummarySchema>
+export type CoursePlacesReplaceRequest = z.input<
+  typeof coursePlacesReplaceRequestSchema
+>

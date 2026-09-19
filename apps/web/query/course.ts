@@ -6,6 +6,7 @@ import {
   getMyCourses,
   getNearbyCourses,
   getSavedCourses,
+  replaceCoursePlaces,
   saveCourse,
   unsaveCourse,
 } from "@/api/course"
@@ -59,4 +60,20 @@ export const unsaveCourseMutationOptions = () =>
   mutationOptions({
     mutationKey: ["courses", "unsave"],
     mutationFn: unsaveCourse,
+  })
+
+export const replaceCoursePlacesMutationOptions = () =>
+  mutationOptions({
+    mutationKey: ["courses", "replace-places"],
+    mutationFn: ({
+      courseId,
+      places,
+      path,
+      endedAt,
+    }: {
+      courseId: string
+      places: Parameters<typeof replaceCoursePlaces>[1]["places"]
+      path: Parameters<typeof replaceCoursePlaces>[1]["path"]
+      endedAt?: string | null
+    }) => replaceCoursePlaces(courseId, { places, path, ended_at: endedAt }),
   })

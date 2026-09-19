@@ -1,6 +1,7 @@
 import { apiClient, parseResponse } from "@/api/client"
 import {
   courseCreateRequestSchema,
+  coursePlacesReplaceRequestSchema,
   courseSaveStatusSchema,
   courseSchema,
   myCoursesSchema,
@@ -8,6 +9,7 @@ import {
   nearbyCoursesSchema,
   type CourseCreateRequest,
   type Course,
+  type CoursePlacesReplaceRequest,
   type NearbyCoursesParams,
 } from "@/schema/course"
 
@@ -52,5 +54,17 @@ export function unsaveCourse(courseId: string) {
   return parseResponse(
     apiClient.delete(`api/courses/${courseId}/save`),
     courseSaveStatusSchema
+  )
+}
+
+export function replaceCoursePlaces(
+  courseId: string,
+  input: CoursePlacesReplaceRequest
+) {
+  return parseResponse(
+    apiClient.put(`api/courses/${courseId}/places`, {
+      json: coursePlacesReplaceRequestSchema.parse(input),
+    }),
+    courseSchema
   )
 }

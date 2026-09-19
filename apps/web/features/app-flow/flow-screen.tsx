@@ -25,6 +25,7 @@ import {
   courseQueryKeys,
   myCoursesQueryOptions,
   nearbyCoursesQueryOptions,
+  replaceCoursePlacesMutationOptions,
   savedCoursesQueryOptions,
   saveCourseMutationOptions,
 } from "@/query/course"
@@ -129,6 +130,7 @@ function FlowScreen({
   const [profileError, setProfileError] = useState<string | null>(null)
   const registerDog = useMutation(registerDogMutationOptions())
   const createApiCourse = useMutation(createCourseMutationOptions())
+  const replaceCoursePlaces = useMutation(replaceCoursePlacesMutationOptions())
   const saveApiCourse = useMutation(saveCourseMutationOptions())
   const updateWalkLog = useMutation(updateWalkLogMutationOptions())
   const updateDog = useMutation(updateMyDogMutationOptions())
@@ -287,8 +289,14 @@ function FlowScreen({
 
     void createApiCourse
       .mutateAsync(courseDraftToApiRequest(courseDraft, coordinates))
-      .then((result) => {
-        const generated = apiCourseToFlowCourse(result, user.id)
+      .then(async (result) => {
+        const finalized = await replaceCoursePlaces.mutateAsync({
+          courseId: String(result.course_id),
+          places: result.places,
+          path: result.path,
+          endedAt: `${courseDraft.date}T${courseDraft.endTime || "00:00"}:00+09:00`,
+        })
+        const generated = apiCourseToFlowCourse(finalized, user.id)
         addCourse(generated)
         queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
         router.replace(`/courses/${generated.id}`)
@@ -303,6 +311,7 @@ function FlowScreen({
     createApiCourse,
     createDemoCourse,
     demoMode,
+    replaceCoursePlaces,
     router,
     screen,
     user.id,

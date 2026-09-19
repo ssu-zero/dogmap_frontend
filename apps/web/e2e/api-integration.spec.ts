@@ -245,6 +245,47 @@ test("creates a course through the authenticated backend endpoint", async ({
       }),
     })
   })
+  await page.route("**/backend-api/api/courses/91/places", async (route) => {
+    expect(route.request().method()).toBe("PUT")
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        course_id: 91,
+        title: "서버가 만든 코스",
+        start_lat: 35.9402,
+        start_lng: 126.9463,
+        walk_date: "2026-09-14T10:00:00+09:00",
+        total_distance_meters: 1800,
+        total_duration_minutes: 90,
+        path: [
+          [35.9402, 126.9463],
+          [35.941, 126.947],
+        ],
+        places: [
+          {
+            place_id: 1,
+            name: "익산 반려견 공원",
+            category: "PARK",
+            image_url: null,
+            lat: 35.941,
+            lng: 126.947,
+            sequence: 1,
+            stay_minutes: 30,
+            travel_minutes: 15,
+            travel_distance_meters: 900,
+            visit_time: null,
+          },
+        ],
+        is_owner: true,
+        is_shared: false,
+        like_count: 0,
+        is_liked: false,
+        save_count: 0,
+        is_saved: false,
+      }),
+    })
+  })
 
   await page.goto("/courses/new")
   await page.getByRole("textbox", { name: "코스 이름" }).fill("서버 요청 코스")
