@@ -19,12 +19,23 @@ export function KakaoCallbackScreen({ code }: { code?: string }) {
 
   useEffect(() => {
     if (started.current || !code) return
+
+    const exchangeKey = `dogmap.kakao-login-code:${code}`
+
+    if (window.sessionStorage.getItem(exchangeKey)) {
+      router.replace("/login?error=kakao-code-used")
+      return
+    }
+
     started.current = true
+    window.sessionStorage.setItem(exchangeKey, "pending")
 
     login.mutate(
       { code },
       {
         onSuccess: (result) => {
+          window.sessionStorage.removeItem(exchangeKey)
+
           if (result.kakao_nickname) {
             updateUser({ name: result.kakao_nickname })
           }

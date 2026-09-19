@@ -345,16 +345,16 @@ function FlowScreen({
   if (screen === "login") {
     return (
       <Plain>
-        <section className="relative flex min-h-svh flex-col overflow-hidden px-5 py-12">
-          <div className="flex flex-1 flex-col items-center pt-26 text-center">
-            <p className="type-body-sb-16 text-gray-600">반려동물 맞춤 산책코스</p>
+        <section className="relative flex min-h-[inherit] flex-col overflow-hidden bg-red-600 px-5 pt-40 pb-24">
+          <div className="flex flex-col items-center text-center">
+            <p className="type-body-r-16 text-gray-50">반려동물 맞춤 산책코스</p>
             <Image
-              src="/logo/main.png"
+              src="/logo/login-main.svg"
               alt="개동여지도"
-              width={230}
-              height={69}
+              width={218}
+              height={55}
               priority
-              className="mt-4 h-[69px] w-[230px] object-contain"
+              className="mt-4 h-[55px] w-[218px]"
             />
           </div>
           <Image
@@ -363,12 +363,14 @@ function FlowScreen({
             width={136}
             height={157}
             priority
+            unoptimized
             className="pointer-events-none absolute right-9 bottom-26 h-[157px] w-[136px] object-contain"
           />
-          <div className="space-y-2">
+          <div className="relative z-10 mt-auto space-y-2">
             <Button
               size="md"
-              className="h-12 w-full rounded-xl bg-[#fee500] text-gray-900 hover:bg-[#fee500]"
+              aria-label="카카오 로그인"
+              className="type-body-r-16 h-12 w-full rounded-full bg-[#fee500] font-medium text-black hover:bg-[#fee500]"
               onClick={() => {
                 if (demoMode) {
                   router.push("/terms")
@@ -383,19 +385,11 @@ function FlowScreen({
                 window.location.assign(authorizeUrl)
               }}
             >
-              카카오 로그인
+              <Image src="/logo/kakao.svg" alt="" width={16} height={16} />
+              카카오로 계속하기
             </Button>
-            {demoMode ? (
-              <Button
-                variant="text"
-                size="full"
-                onClick={() => router.push(termsAgreed ? "/" : "/terms")}
-              >
-                데모 사용자로 둘러보기
-              </Button>
-            ) : null}
             {authConfigurationError ? (
-              <p role="alert" className="type-caption-r-12 text-red-600">
+              <p role="alert" className="type-caption-r-12 text-white">
                 카카오 로그인 환경 설정이 필요합니다.
               </p>
             ) : null}
@@ -409,7 +403,7 @@ function FlowScreen({
     const nameValid = isDogNameValid(onboarding.dogName)
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col py-8">
+        <section className="flex min-h-[inherit] flex-col px-5 py-8">
           <div className="flex-1 space-y-6">
             <LoadingSteps steps={["current", "upcoming"]} />
             <Image
@@ -459,7 +453,7 @@ function FlowScreen({
     const complete = isDogInfoComplete(onboarding)
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col py-8">
+        <section className="flex min-h-[inherit] flex-col px-5 py-8">
           <div className="flex-1 space-y-6">
             <button
               type="button"
@@ -518,7 +512,7 @@ function FlowScreen({
                 ))}
               </div>
             </fieldset>
-            <div className="rounded-xl bg-red-50 p-4">
+            <div className="rounded-xl bg-gray-50 p-5">
               <p className="type-body-r-14 text-gray-500">
                 체중·나이는 권장 체류시간을 계산하고 무리 없는 코스를 추천하는
                 데 사용돼요.
@@ -578,23 +572,27 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col py-12">
-          <div className="flex-1 space-y-5">
-            <h1 className="type-head-sb-24">약관에 동의해주세요</h1>
-            <p className="type-body-r-16 text-gray-400">
-              서비스를 이용하기 위해서는 동의가 필요해요.
-            </p>
+        <section className="flex min-h-[inherit] flex-col px-5 pb-8 pt-16">
+          <div>
+            <h1 className="type-head-sb-24 text-gray-800">
+              개동여지도 약관을
+              <br />
+              확인하고 동의해주세요.
+            </h1>
+          </div>
+          <div className="mt-auto space-y-6">
             <button
-              className="type-body-sb-16 flex w-full items-center gap-3 border-b border-gray-100 py-5 text-left"
+              className="type-body-sb-16 flex w-full items-center gap-3 border-b border-gray-150 p-3 text-left text-gray-700"
+              aria-label="네, 모두 동의합니다."
               onClick={() => setAllTerms(!allAgreed)}
               aria-pressed={allAgreed}
             >
               <span className={allAgreed ? "text-red-600" : "text-gray-200"}>
                 ●
               </span>
-              네, 모두 동의합니다.
+              모두 동의하기
             </button>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <TermRow
                 term="service"
                 label="서비스 이용약관"
@@ -617,10 +615,11 @@ function FlowScreen({
           </div>
           <Button
             size="full"
+            aria-label="가입 완료"
             disabled={!termsAgreed}
             onClick={() => router.push("/onboarding/1")}
           >
-            가입 완료
+            확인
           </Button>
         </section>
       </Plain>
@@ -1644,7 +1643,7 @@ function TermRow({
   onToggle: (term: RequiredTermKey, value: boolean) => void
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 rounded px-3 py-3 bg-gray-50">
       <button
         type="button"
         className="type-body-r-16 flex min-w-0 items-center gap-3 text-left"
@@ -1655,10 +1654,7 @@ function TermRow({
         <span className={checked ? "text-red-600" : "text-gray-200"}>●</span>
         <span>(필수) {label}</span>
       </button>
-      <Link
-        href={`/terms/${term}`}
-        className="type-body-r-14 shrink-0 text-gray-400"
-      >
+      <Link href={`/terms/${term}`} className="type-body-r-16 shrink-0 px-3 text-red-600">
         보기
       </Link>
     </div>
