@@ -3,6 +3,8 @@
 import Script from "next/script"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import { cn } from "@workspace/ui/lib/utils"
+
 type Coordinates = { lat: number; lng: number }
 
 type KakaoMapProps = {
@@ -10,6 +12,7 @@ type KakaoMapProps = {
   path?: [number, number][]
   places: string[]
   onSelectPlace: (place: string) => void
+  className?: string
 }
 
 type KakaoMapInstance = {
@@ -73,6 +76,7 @@ export function KakaoCourseMap({
   path = [],
   places,
   onSelectPlace,
+  className,
 }: KakaoMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [sdkReady, setSdkReady] = useState(false)
@@ -132,7 +136,7 @@ export function KakaoCourseMap({
 
   if (!appKey) {
     return (
-      <section className="flex h-44 items-center justify-center rounded-2xl bg-gray-100 px-5 text-center">
+      <section className={cn("flex h-84 items-center justify-center bg-gray-100 px-5 text-center", className)}>
         <p className="type-body-r-14 text-gray-500">
           카카오맵 키를 확인한 뒤 실제 지도를 표시할 수 있어요.
         </p>
@@ -141,7 +145,7 @@ export function KakaoCourseMap({
   }
 
   return (
-    <section className="relative h-44 overflow-hidden rounded-2xl bg-gray-100" aria-label="코스 지도">
+    <section className={cn("relative h-84 overflow-hidden bg-gray-100", className)} aria-label="코스 지도">
       <Script
         id="kakao-map-sdk"
         src={`https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`}

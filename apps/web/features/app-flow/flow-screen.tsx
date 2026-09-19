@@ -1005,31 +1005,36 @@ function FlowScreen({
       ""
     return (
       <Plain>
-        <Header
-          title={
-            screen === "community-detail"
-              ? "커뮤니티 코스"
-              : screen === "archive-detail"
-                ? "발자국"
-                : "코스 상세"
-          }
-          onBack={() => router.back()}
-          trailing={
-            ownCourse ? (
-              <Button
-                variant="text"
-                size="sm"
-                onClick={() => setListOpen((value) => !value)}
-              >
-                목록
-              </Button>
-            ) : undefined
-          }
-        />
-        <section className="space-y-5 px-5 py-4">
+        <div className="relative h-84">
+          <KakaoCourseMap
+            className="size-full"
+            center={course.startCoordinates ?? fallbackCoordinates}
+            path={course.path}
+            places={course.places}
+            onSelectPlace={setSelectedPlace}
+          />
+          <Header
+            className="absolute inset-x-0 top-0 bg-gradient-to-b from-gray-900/80 to-transparent text-white [&_svg]:text-white"
+            title={undefined}
+            onBack={() => router.back()}
+            trailing={
+              ownCourse ? (
+                <Button
+                  variant="text"
+                  size="sm"
+                  className="text-white hover:bg-white/10"
+                  onClick={() => setListOpen((value) => !value)}
+                >
+                  목록
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
+        <section className="relative -mt-28 space-y-5 rounded-t-2xl bg-gray-900 px-5 py-6 text-white">
           <div>
             <div className="flex items-center justify-between">
-              <Chip variant={ownCourse ? "selected" : "softRed"}>
+              <Chip variant={ownCourse ? "dark" : "red"}>
                 {ownCourse ? "내 코스" : "추천 코스"}
               </Chip>
               {course.edge ? <Chip variant="outline">엣지 케이스</Chip> : null}
@@ -1040,12 +1045,6 @@ function FlowScreen({
               {course.placeCount ?? course.places.length}곳
             </p>
           </div>
-          <KakaoCourseMap
-            center={course.startCoordinates ?? fallbackCoordinates}
-            path={course.path}
-            places={course.places}
-            onSelectPlace={setSelectedPlace}
-          />
           {selectedPlace ? (
             <section
               className="rounded-xl bg-red-50 p-4"
@@ -1070,7 +1069,7 @@ function FlowScreen({
             </section>
           ) : null}
           {listOpen ? (
-            <div className="rounded-xl bg-gray-50 p-4">
+            <div className="rounded-xl bg-gray-800 p-4">
               <p className="type-body-sb-14">내 코스 관리</p>
               <Button
                 variant="text"
@@ -1083,9 +1082,8 @@ function FlowScreen({
           ) : null}
           <section className="space-y-2">
             {course.summaryOnly ? (
-              <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                서버의 코스 상세 조회 API가 아직 없어 요약 정보만 표시하고
-                있어요.
+              <p className="rounded-xl bg-gray-800 p-4 text-sm text-gray-400">
+                코스의 상세 장소 정보를 불러오고 있어요.
               </p>
             ) : null}
             {course.places.map((place, index) => (
@@ -1094,6 +1092,7 @@ function FlowScreen({
                 index={index + 1}
                 title={place}
                 category="반려견 동반 가능"
+                className="border border-gray-600 bg-gray-800 shadow-none"
               />
             ))}
           </section>
