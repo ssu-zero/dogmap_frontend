@@ -106,12 +106,10 @@ export const apiClient = ky.create({
           return error
         }
 
-        const body = apiErrorBodySchema.safeParse(
-          await error.response
-            .clone()
-            .json()
-            .catch(() => undefined)
-        )
+        // Ky v2 consumes an error response while populating `error.data`.
+        // Cloning that already-consumed response throws before the login UI
+        // can render its recovery state, so always read Ky's parsed payload.
+        const body = apiErrorBodySchema.safeParse(error.data)
         const message = body.success
           ? (body.data.detail ?? error.message)
           : error.message
