@@ -11,7 +11,12 @@ type NavigationItem = {
 }
 const defaultNavigationItems: NavigationItem[] = [
   { value: "home", label: "홈", icon: "homeLine", activeIcon: "homeFill" },
-  { value: "course", label: "코스", icon: "location", activeIcon: "location" },
+  {
+    value: "course",
+    label: "코스",
+    icon: "locationLine",
+    activeIcon: "location",
+  },
   {
     value: "archive",
     label: "발자국",

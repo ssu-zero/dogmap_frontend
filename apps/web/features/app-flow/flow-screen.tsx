@@ -88,6 +88,26 @@ type Screen =
   | "mypage-edit"
   | "error"
 
+/**
+ * Entry state deliberately lives at the root route: the production app must
+ * never expose an authenticated home screen merely because a visitor opened
+ * `/`. Demo mode remains available for the clickable design harness.
+ */
+function AppEntry() {
+  const demoMode = useDemoMode()
+  const [hasAccessToken, setHasAccessToken] = useState(false)
+
+  useEffect(() => {
+    const syncAuthState = () => setHasAccessToken(Boolean(getAccessToken()))
+    syncAuthState()
+    window.addEventListener("dogmap:auth-changed", syncAuthState)
+    return () =>
+      window.removeEventListener("dogmap:auth-changed", syncAuthState)
+  }, [])
+
+  return <FlowScreen screen={demoMode || hasAccessToken ? "home" : "login"} />
+}
+
 function FlowScreen({
   screen,
   courseId,
@@ -1453,29 +1473,23 @@ function FlowScreen({
                   imageUrl = upload.image_url
                 }
 
-                updateDog.mutate(
-                  {
-                    name: dogName.trim(),
-                    age: Number(age.replace(/\D/g, "")),
-                    size: dogSize,
-                    ...(imageUrl ? { image_url: imageUrl } : {}),
-                  },
-                  {
-                    onSuccess: (result) => {
-                      const nextAge =
-                        result.age === null ? "나이 미입력" : `${result.age}살`
-                      updateUser({ dogName: result.name, age: nextAge })
-                      queryClient.setQueryData(dogQueryKeys.me, result)
-                      router.push("/mypage")
-                    },
-                  }
-                )
+                const result = await updateDog.mutateAsync({
+                  name: dogName.trim(),
+                  age: Number(age.replace(/\D/g, "")),
+                  size: dogSize,
+                  ...(imageUrl ? { image_url: imageUrl } : {}),
+                })
+                const nextAge =
+                  result.age === null ? "나이 미입력" : `${result.age}살`
+                updateUser({ dogName: result.name, age: nextAge })
+                queryClient.setQueryData(dogQueryKeys.me, result)
+                router.push("/mypage")
               } catch (error) {
                 setProfileError(
                   error instanceof Error ? error.message : "프로필을 저장하지 못했어요."
                 )
               }
-            })
+            })()
           }}
         >
           <div className="flex justify-center">
@@ -1679,4 +1693,4 @@ function dedupeCourses(courses: Course[]) {
   )
 }
 
-export { FlowScreen }
+export { AppEntry, FlowScreen }
