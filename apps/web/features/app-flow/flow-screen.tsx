@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
 import { getAccessToken, getSignupToken, setAccessToken } from "@/api/client"
+import { getMyDogImageUploadUrl } from "@/api/dog"
 import {
   courseDetailQueryOptions,
   createCourseMutationOptions,
@@ -183,6 +184,8 @@ function FlowScreen({
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
   const [dogSize, setDogSize] = useState<"SMALL" | "MEDIUM" | "LARGE">("SMALL")
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [draftDiaries, setDraftDiaries] = useState<Record<string, string>>({})
   const [communityFilter, setCommunityFilter] = useState<
     "전체" | "소형" | "중형" | "대형"
@@ -245,6 +248,8 @@ function FlowScreen({
       : activeDogSize === "MEDIUM"
         ? "중형견"
         : "대형견"
+  const profileImageSrc =
+    profileImagePreview ?? myDog.data?.image_url ?? "/img/profile.png"
 
   useEffect(() => {
     const syncAuthState = () => setHasAccessToken(Boolean(getAccessToken()))
@@ -1371,10 +1376,11 @@ function FlowScreen({
         <section className="space-y-6 px-5 py-6">
           <div className="flex items-center gap-4">
             <Image
-              src="/img/profile.png"
+              src={profileImageSrc}
               alt={`${user.dogName} 프로필`}
               width={80}
               height={80}
+              unoptimized={profileImageSrc.startsWith("http")}
               className="size-20 rounded-full object-cover"
             />
             <div className="min-w-0 flex-1">
@@ -1431,33 +1437,72 @@ function FlowScreen({
               return
             }
 
-            updateDog.mutate(
-              {
-                name: dogName.trim(),
-                age: Number(age.replace(/\D/g, "")),
-                size: dogSize,
-              },
-              {
-                onSuccess: (result) => {
-                  const nextAge =
-                    result.age === null ? "나이 미입력" : `${result.age}살`
-                  updateUser({ dogName: result.name, age: nextAge })
-                  queryClient.setQueryData(dogQueryKeys.me, result)
-                  router.push("/mypage")
-                },
+            void (async () => {
+              try {
+                let imageUrl: string | undefined
+                if (profileImageFile) {
+                  const extension = profileImageFile.name.split(".").pop() || "jpg"
+                  const upload = await getMyDogImageUploadUrl({
+                    file_extension: extension.toLowerCase(),
+                  })
+                  const response = await fetch(upload.upload_url, {
+                    method: "PUT",
+                    body: profileImageFile,
+                  })
+                  if (!response.ok) throw new Error("프로필 이미지를 업로드하지 못했어요.")
+                  imageUrl = upload.image_url
+                }
+
+                updateDog.mutate(
+                  {
+                    name: dogName.trim(),
+                    age: Number(age.replace(/\D/g, "")),
+                    size: dogSize,
+                    ...(imageUrl ? { image_url: imageUrl } : {}),
+                  },
+                  {
+                    onSuccess: (result) => {
+                      const nextAge =
+                        result.age === null ? "나이 미입력" : `${result.age}살`
+                      updateUser({ dogName: result.name, age: nextAge })
+                      queryClient.setQueryData(dogQueryKeys.me, result)
+                      router.push("/mypage")
+                    },
+                  }
+                )
+              } catch (error) {
+                setProfileError(
+                  error instanceof Error ? error.message : "프로필을 저장하지 못했어요."
+                )
               }
-            )
+            })
           }}
         >
           <div className="flex justify-center">
             <Image
-              src="/img/profile.png"
+              src={profileImageSrc}
               alt={`${dogName || "반려견"} 프로필`}
               width={96}
               height={96}
+              unoptimized={profileImageSrc.startsWith("http")}
               className="size-24 rounded-full object-cover"
             />
           </div>
+          <label className="type-body-sb-14 mx-auto block w-fit cursor-pointer text-red-600">
+            사진 변경
+            <input
+              aria-label="프로필 사진"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (!file) return
+                setProfileImageFile(file)
+                setProfileImagePreview(URL.createObjectURL(file))
+              }}
+            />
+          </label>
           <label className="block space-y-2">
             <span className="type-body-sb-14">
               {demoMode ? "보호자 이름" : "카카오 닉네임"}

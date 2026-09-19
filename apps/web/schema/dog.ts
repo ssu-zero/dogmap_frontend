@@ -28,6 +28,15 @@ export const signupCompleteResponseSchema = z.object({
   dog: dogSchema,
 })
 
+export const presignedUploadRequestSchema = z.object({
+  file_extension: z.string().min(1).max(10),
+})
+
+export const presignedUploadResponseSchema = z.object({
+  upload_url: z.string().url(),
+  image_url: z.string().url(),
+})
+
 export type Dog = z.output<typeof dogSchema>
 export type DogSize = z.output<typeof dogSizeSchema>
 export type DogCreateRequest = z.input<typeof dogCreateRequestSchema>
@@ -35,3 +44,4 @@ export type DogUpdateRequest = z.input<typeof dogUpdateRequestSchema>
 export type SignupCompleteResponse = z.output<
   typeof signupCompleteResponseSchema
 >
+export type PresignedUploadRequest = z.input<typeof presignedUploadRequestSchema>
