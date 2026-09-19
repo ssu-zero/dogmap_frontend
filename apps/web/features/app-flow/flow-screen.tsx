@@ -33,6 +33,7 @@ import {
   walkLogQueryKeys,
   walkLogsQueryOptions,
 } from "@/query/log"
+import { nearbyPlacesQueryOptions } from "@/query/place"
 import {
   dogQueryKeys,
   myDogQueryOptions,
@@ -184,6 +185,19 @@ function FlowScreen({
   const [communityFilter, setCommunityFilter] = useState<
     "전체" | "소형" | "중형" | "대형"
   >("전체")
+  const [homeCategory, setHomeCategory] = useState<
+    "전체" | "식당" | "산책" | "카페" | "액티비티"
+  >("전체")
+  const nearbyPlaces = useQuery({
+    ...nearbyPlacesQueryOptions({
+      lat: coordinates.lat,
+      lng: coordinates.lng,
+      category: homeCategory === "전체" ? "카페" : homeCategory,
+      radius_m: 2000,
+      limit: 3,
+    }),
+    enabled: hasAccessToken && !demoMode && screen === "home",
+  })
 
   const serverRecommendations = (nearbyCourses.data ?? []).map((item) =>
     nearbyCourseToFlowCourse(item, user.id)
@@ -601,59 +615,104 @@ function FlowScreen({
   if (screen === "home")
     return (
       <AppShell tab="home">
-        <section className="space-y-6 px-5 py-8">
-          <div>
-            <p className="type-body-r-14 text-gray-400">
-              {user.dogName}와 함께
-            </p>
-            <h1 className="type-head-sb-24">오늘은 어디로 갈까요?</h1>
-          </div>
-          <section className="rounded-2xl bg-red-50 p-5">
-            <p className="type-body-sb-16">맞춤 산책 코스를 만들어 보세요</p>
-            <p className="type-body-r-14 mt-1 text-gray-500">
-              시간과 취향에 맞춰 추천해 드려요.
-            </p>
+        <section className="relative overflow-hidden bg-gray-900 px-5 pb-8 pt-10 text-white">
+          <Image
+            src="/logo/with_paw.png"
+            alt="개동여지도"
+            width={124}
+            height={30}
+            className="h-[30px] w-[124px] brightness-0 invert"
+          />
+          <Image
+            src="/img/dog.png"
+            alt="여행을 준비하는 반려견"
+            width={206}
+            height={260}
+            className="pointer-events-none absolute right-[-8px] top-14 h-[210px] w-auto object-contain"
+          />
+          <div className="relative mt-11 space-y-6">
+            <h1 className="type-head-sb-24 whitespace-pre-line">
+              {`오늘 ${user.dogName}랑\n어디 놀러 갈까요?`}
+            </h1>
             <Button
-              className="mt-4"
+              size="md"
+              className="rounded-xl px-10"
               onClick={() => router.push("/courses/new")}
             >
               코스 만들기
             </Button>
-          </section>
-          <section className="space-y-3">
-            <h2 className="type-head-sb-20">추천 코스</h2>
-            {(demoMode
-              ? communityCourses.slice(0, 1)
-              : serverRecommendations.slice(0, 1)
-            ).map((item) => (
-              <button
-                className="w-full text-left"
-                key={item.id}
-                onClick={() =>
-                  router.push(
-                    demoMode ? `/community/${item.id}` : `/courses/${item.id}`
-                  )
-                }
-              >
-                <CourseCard
-                  title={item.title}
-                  hours={item.duration / 60}
-                  spots={item.placeCount ?? item.places.length}
-                  variant="community-y"
-                />
-              </button>
-            ))}
-            {!demoMode && nearbyCourses.isPending ? (
-              <p className="type-body-r-14 text-gray-400">
-                주변 코스를 불러오고 있어요.
-              </p>
-            ) : null}
-            {!demoMode && nearbyCourses.isError ? (
-              <p role="alert" className="type-body-r-14 text-red-600">
-                주변 코스를 불러오지 못했어요.
-              </p>
-            ) : null}
-          </section>
+          </div>
+        </section>
+        <section className="-mt-1 flex-1 rounded-t-2xl border-t-2 border-gray-200 bg-white px-5 py-5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="type-head-sb-20">동반 가능시설</h2>
+              <span className="type-body-r-14 text-gray-200">내 주변</span>
+            </div>
+            <p className="type-body-r-14 text-gray-400">
+              {user.dogName}와 함께 갈 수 있어요!
+            </p>
+            <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="장소 카테고리">
+              {(["전체", "식당", "산책", "카페", "액티비티"] as const).map((category) => (
+                <Chip
+                  key={category}
+                  variant={homeCategory === category ? "selected" : "light"}
+                  className="shrink-0"
+                  aria-pressed={homeCategory === category}
+                  onClick={() => setHomeCategory(category)}
+                >
+                  {category}
+                </Chip>
+              ))}
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {demoMode ? (
+              communityCourses.slice(0, 3).map((item) => (
+                <button
+                  className="w-full text-left"
+                  key={item.id}
+                  onClick={() => router.push(`/community/${item.id}`)}
+                >
+                  <CourseCard
+                    title={item.title}
+                    hours={item.duration / 60}
+                    spots={item.placeCount ?? item.places.length}
+                    variant="community-y"
+                  />
+                </button>
+              ))
+            ) : nearbyPlaces.data?.length ? (
+              nearbyPlaces.data.map((place) => (
+                <article
+                  key={place.content_id}
+                  className="flex min-h-26 items-center justify-between rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3"
+                >
+                  <div className="min-w-0 space-y-2">
+                    <h3 className="type-body-sb-16 truncate text-gray-600">{place.title}</h3>
+                    <p className="type-body-r-13 text-gray-400">
+                      {place.category} · {(place.dist / 1000).toFixed(1)}km
+                    </p>
+                    <p className="type-caption-r-12 text-red-700">반려견 동반 가능</p>
+                  </div>
+                  {place.image_url ? (
+                    <Image
+                      src={place.image_url}
+                      alt=""
+                      width={76}
+                      height={76}
+                      unoptimized
+                      className="size-19 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : null}
+                </article>
+              ))
+            ) : nearbyPlaces.isPending ? (
+              <p className="type-body-r-14 text-gray-400">주변 장소를 불러오고 있어요.</p>
+            ) : (
+              <p className="type-body-r-14 text-gray-400">주변 동반 가능시설을 준비하고 있어요.</p>
+            )}
+          </div>
         </section>
         {locationPermissionPromptOpen ? (
           <div
