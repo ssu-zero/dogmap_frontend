@@ -13,14 +13,14 @@ backend's implemented contracts for the following behavior:
 
 | Product behavior               | Backend contract                 | Runtime status              |
 | ------------------------------ | -------------------------------- | --------------------------- |
-| Kakao sign-in                  | `POST /auth/kakao/login`         | Live API                    |
-| New dog registration           | `POST /dogs` with `signup_token` | Live API                    |
-| My dog profile                 | `GET /dogs/me`, `PATCH /dogs/me` | Live API                    |
-| Nearby recommendations         | `GET /api/v1/courses`            | Live API                    |
-| Course generation              | `POST /api/v1/courses`           | Live API                    |
-| My-course reload/detail lookup | No matching backend endpoint     | Session-only after creation |
-| Community ownership/save       | No matching backend endpoint     | Demo Harness only           |
-| Archive diary/report           | No matching backend endpoint     | Demo Harness only           |
+| Kakao sign-in                  | `POST /api/auth/kakao/login`          | Live API |
+| New dog registration           | `POST /api/dogs` with `signup_token`  | Live API |
+| My dog profile                 | `GET/PATCH /api/dogs/me`              | Live API |
+| Nearby facilities              | `GET /api/places`                      | Live API |
+| Course generation/finalization | `POST /api/courses`, `PUT .../places` | Live API |
+| My-course reload/detail lookup | `GET /api/dogs/me/courses`, `/courses/{id}` | Live API |
+| Community ownership/save       | `GET /api/courses`, `POST .../save`   | Live API |
+| Archive diary/report           | `GET/PATCH /api/logs`                 | Live API |
 
 `NEXT_PUBLIC_APP_MODE=demo` exists only for deterministic Playwright coverage of
 the unsupported Harness branches. Production and ordinary local development use
@@ -53,9 +53,9 @@ For each remaining node:
 - [x] Community ownership and save-to-my-course flow
 - [x] Archive footprint list, persisted course diary entry and activity report flow
 - [x] My page, edit, reusable terms, error and 404
-- [x] Final Figma frame-by-frame visual audit
+- [ ] Final Figma UI frame-by-frame visual audit (44-frame pass in progress)
 - [x] Backend contract audit and live API boundary correction
-- [ ] Backend support for own-course detail/reload, community save, archive and diary
+- [x] Backend support for own-course detail/reload, community save, archive and diary
 
 ## Figma node coverage
 
