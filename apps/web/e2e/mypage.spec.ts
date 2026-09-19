@@ -34,7 +34,7 @@ test("renders the error and not-found recovery actions", async ({ page }) => {
   ).toBeVisible()
   await page.getByRole("button", { name: "홈으로" }).click()
   await expect(
-    page.getByRole("heading", { name: "오늘은 어디로 갈까요?" })
+    page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
 
   await page.goto("/route-that-does-not-exist")
@@ -43,6 +43,6 @@ test("renders the error and not-found recovery actions", async ({ page }) => {
   ).toBeVisible()
   await page.getByRole("link", { name: "홈으로 돌아가기" }).click()
   await expect(
-    page.getByRole("heading", { name: "오늘은 어디로 갈까요?" })
+    page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
 })

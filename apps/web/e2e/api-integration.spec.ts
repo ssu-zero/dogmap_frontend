@@ -34,7 +34,22 @@ test.beforeEach(async ({ page }) => {
       return
     }
 
-    if (request.method() === "GET" && pathname.endsWith("/api/v1/courses")) {
+    if (
+      request.method() === "GET" &&
+      (pathname.endsWith("/api/courses") ||
+        pathname.endsWith("/api/dogs/me/courses") ||
+        pathname.endsWith("/api/saves") ||
+        pathname.endsWith("/api/logs"))
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "[]",
+      })
+      return
+    }
+
+    if (request.method() === "GET" && pathname.endsWith("/api/places")) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -57,7 +72,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
   await useLiveApiMode(page)
   let loginBody: unknown
 
-  await page.route("**/backend-api/auth/kakao/login", async (route) => {
+  await page.route("**/backend-api/api/auth/kakao/login", async (route) => {
     loginBody = route.request().postDataJSON()
     await route.fulfill({
       status: 200,
@@ -72,7 +87,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
       }),
     })
   })
-  await page.route("**/backend-api/dogs/me", async (route) => {
+  await page.route("**/backend-api/api/dogs/me", async (route) => {
     expect(route.request().headers().authorization).toBe(
       "Bearer access-from-server"
     )
@@ -82,7 +97,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
       body: JSON.stringify(dog),
     })
   })
-  await page.route("**/backend-api/api/v1/courses*", async (route) => {
+  await page.route("**/backend-api/api/courses*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -92,7 +107,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
 
   await page.goto("/auth/kakao/callback?code=kakao-code")
   await expect(
-    page.getByRole("heading", { name: "오늘은 어디로 갈까요?" })
+    page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
   expect(loginBody).toEqual({ code: "kakao-code" })
   await expect
@@ -106,7 +121,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
   await useLiveApiMode(page)
   let registrationBody: Record<string, unknown> | undefined
 
-  await page.route("**/backend-api/auth/kakao/login", async (route) => {
+  await page.route("**/backend-api/api/auth/kakao/login", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -120,7 +135,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
       }),
     })
   })
-  await page.route("**/backend-api/dogs", async (route) => {
+  await page.route("**/backend-api/api/dogs", async (route) => {
     expect(route.request().headers().authorization).toBe(
       "Bearer signup-from-server"
     )
@@ -131,7 +146,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
       body: JSON.stringify({ access_token: "new-access-token", dog }),
     })
   })
-  await page.route("**/backend-api/api/v1/courses*", async (route) => {
+  await page.route("**/backend-api/api/courses*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -150,7 +165,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
   await page.getByRole("button", { name: "개동여지도 시작하기" }).click()
 
   await expect(
-    page.getByRole("heading", { name: "오늘은 어디로 갈까요?" })
+    page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
   expect(registrationBody).toMatchObject({
     name: "몽이",
@@ -171,14 +186,14 @@ test("creates a course through the authenticated backend endpoint", async ({
   await useLiveApiMode(page, "course-access-token")
   let createBody: Record<string, unknown> | undefined
 
-  await page.route("**/backend-api/dogs/me", async (route) => {
+  await page.route("**/backend-api/api/dogs/me", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(dog),
     })
   })
-  await page.route("**/backend-api/api/v1/courses", async (route) => {
+  await page.route("**/backend-api/api/courses", async (route) => {
     if (route.request().method() !== "POST") {
       await route.fulfill({
         status: 200,
@@ -199,6 +214,7 @@ test("creates a course through the authenticated backend endpoint", async ({
         title: "서버가 만든 코스",
         start_lat: 35.9402,
         start_lng: 126.9463,
+        walk_date: "2026-09-14T10:00:00+09:00",
         total_distance_meters: 1800,
         total_duration_minutes: 90,
         path: [
@@ -217,8 +233,15 @@ test("creates a course through the authenticated backend endpoint", async ({
             stay_minutes: 30,
             travel_minutes: 15,
             travel_distance_meters: 900,
+            visit_time: null,
           },
         ],
+        is_owner: true,
+        is_shared: false,
+        like_count: 0,
+        is_liked: false,
+        save_count: 0,
+        is_saved: false,
       }),
     })
   })
@@ -247,31 +270,41 @@ test("creates a course through the authenticated backend endpoint", async ({
       { category: "CAFE", count: 1 },
     ],
     title: "서버 요청 코스",
+    walk_date: "2026-09-14T10:00:00+09:00",
   })
 })
 
-test("loads nearby course recommendations from the backend", async ({
+test("loads nearby companion facilities from the backend", async ({
   page,
 }) => {
-  await useLiveApiMode(page)
+  await useLiveApiMode(page, "places-access-token")
   let requestedUrl = ""
 
-  await page.route("**/backend-api/api/v1/courses*", async (route) => {
+  await page.route("**/backend-api/api/places*", async (route) => {
     requestedUrl = route.request().url()
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify([
         {
-          course_id: 51,
-          title: "익산역 주변 추천 코스",
-          start_lat: 35.9402,
-          start_lng: 126.9463,
-          distance_meters: 120,
-          total_distance_meters: 1600,
-          total_duration_minutes: 75,
-          place_count: 2,
-          thumbnail_image_url: null,
+          content_id: "place-51",
+          title: "익산역 반려견 카페",
+          category: "카페",
+          address: "전북 익산시",
+          lat: 35.9402,
+          lng: 126.9463,
+          dist: 120,
+          image_url: null,
+          overview: null,
+          open_time: null,
+          rest_day: null,
+          pet_accompany_type: "동반 가능",
+          pet_need_materials: null,
+          pet_caution: null,
+          pet_facilities: null,
+          place_id: 51,
+          like_count: 0,
+          is_liked: false,
         },
       ]),
     })
@@ -279,14 +312,12 @@ test("loads nearby course recommendations from the backend", async ({
 
   await page.goto("/")
   await expect(
-    page.getByRole("heading", { name: "익산역 주변 추천 코스" })
+    page.getByRole("heading", { name: "익산역 반려견 카페" })
   ).toBeVisible()
   expect(requestedUrl).toContain("lat=35.9402")
   expect(requestedUrl).toContain("lng=126.9463")
 
-  await page.getByRole("heading", { name: "익산역 주변 추천 코스" }).click()
-  await expect(page.getByText("약 75분 · 2곳")).toBeVisible()
-  await expect(page.getByText(/코스 상세 조회 API가 아직 없어/)).toBeVisible()
+  await expect(page.getByText("카페 · 0.1km")).toBeVisible()
 })
 
 test("loads and patches the server-backed dog profile", async ({ page }) => {
@@ -294,7 +325,7 @@ test("loads and patches the server-backed dog profile", async ({ page }) => {
   let patchBody: unknown
   let currentDog = dog
 
-  await page.route("**/backend-api/dogs/me", async (route) => {
+  await page.route("**/backend-api/api/dogs/me", async (route) => {
     expect(route.request().headers().authorization).toBe(
       "Bearer profile-access-token"
     )
@@ -347,8 +378,6 @@ test("does not present demo community data as live server data", async ({
   await useLiveApiMode(page)
   await page.goto("/community")
 
-  await expect(
-    page.getByRole("heading", { name: "커뮤니티 연결을 준비하고 있어요" })
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: "커뮤니티" })).toBeVisible()
   await expect(page.getByText("서울숲 반려견 산책 코스")).toHaveCount(0)
 })
