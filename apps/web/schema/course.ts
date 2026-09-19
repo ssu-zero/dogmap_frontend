@@ -21,6 +21,7 @@ export const courseCreateRequestSchema = z.object({
   target_duration_minutes: z.number().int().positive(),
   category_targets: z.array(categoryTargetSchema).min(1),
   title: z.string().nullable().optional(),
+  walk_date: z.string().datetime({ offset: true }),
 })
 
 export const coursePlaceSchema = z.object({
@@ -34,6 +35,7 @@ export const coursePlaceSchema = z.object({
   stay_minutes: z.number().int().nullable(),
   travel_minutes: z.number().int().nullable(),
   travel_distance_meters: z.number().int().nullable(),
+  visit_time: z.string().datetime({ offset: true }).nullable().optional(),
 })
 
 export const courseSchema = z.object({
@@ -41,25 +43,44 @@ export const courseSchema = z.object({
   title: z.string(),
   start_lat: z.number(),
   start_lng: z.number(),
+  walk_date: z.string().datetime({ offset: true }).nullable(),
   total_distance_meters: z.number(),
   total_duration_minutes: z.number(),
   path: z.array(z.tuple([z.number(), z.number()])),
   places: z.array(coursePlaceSchema),
+  is_owner: z.boolean(),
+  is_shared: z.boolean(),
+  like_count: z.number().int(),
+  is_liked: z.boolean(),
+  save_count: z.number().int(),
+  is_saved: z.boolean(),
+  generation_duration_ms: z.number().int().nullable().optional(),
 })
 
-export const nearbyCourseSchema = z.object({
+export const courseSummarySchema = z.object({
   course_id: z.number().int(),
   title: z.string(),
   start_lat: z.number(),
   start_lng: z.number(),
-  distance_meters: z.number().int(),
+  distance_meters: z.number().int().nullable().optional(),
   total_distance_meters: z.number().int(),
   total_duration_minutes: z.number().int(),
   place_count: z.number().int(),
   thumbnail_image_url: z.string().nullable(),
+  is_owner: z.boolean(),
+  like_count: z.number().int(),
+  is_liked: z.boolean(),
+  save_count: z.number().int(),
+  is_saved: z.boolean(),
 })
 
-export const nearbyCoursesSchema = z.array(nearbyCourseSchema)
+export const nearbyCoursesSchema = z.array(courseSummarySchema)
+export const myCoursesSchema = z.array(courseSummarySchema)
+export const courseSaveStatusSchema = z.object({
+  course_id: z.number().int(),
+  is_saved: z.boolean(),
+  save_count: z.number().int(),
+})
 
 export const nearbyCoursesParamsSchema = z.object({
   lat: z.number().min(-90).max(90),
@@ -72,4 +93,5 @@ export const nearbyCoursesParamsSchema = z.object({
 export type CourseCreateRequest = z.input<typeof courseCreateRequestSchema>
 export type Course = z.output<typeof courseSchema>
 export type NearbyCoursesParams = z.input<typeof nearbyCoursesParamsSchema>
-export type NearbyCourse = z.output<typeof nearbyCourseSchema>
+export type NearbyCourse = z.output<typeof courseSummarySchema>
+export type CourseSummary = z.output<typeof courseSummarySchema>

@@ -67,6 +67,7 @@ export function courseDraftToApiRequest(
       count: 1,
     })),
     title: draft.title.trim(),
+    walk_date: `${draft.date}T${draft.startTime || "00:00"}:00+09:00`,
   }
 }
 
@@ -76,24 +77,29 @@ export function apiCourseToFlowCourse(
 ): Course {
   return {
     id: String(course.course_id),
-    userId,
+    userId: course.is_owner ? userId : "other",
     title: course.title,
     duration: Math.round(course.total_duration_minutes),
     places: course.places.map((place) => place.name),
+    saved: course.is_saved,
     path: course.path,
     startCoordinates: { lat: course.start_lat, lng: course.start_lng },
   }
 }
 
-export function nearbyCourseToFlowCourse(course: NearbyCourse): Course {
+export function nearbyCourseToFlowCourse(
+  course: NearbyCourse,
+  currentUserId = "zero"
+): Course {
   return {
     id: String(course.course_id),
-    userId: "nearby",
+    userId: course.is_owner ? currentUserId : "nearby",
     title: course.title,
     duration: course.total_duration_minutes,
     places: [],
     startCoordinates: { lat: course.start_lat, lng: course.start_lng },
     summaryOnly: true,
     placeCount: course.place_count,
+    saved: course.is_saved,
   }
 }

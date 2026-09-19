@@ -9,7 +9,7 @@ export async function loginWithKakao(input: KakaoLoginRequest) {
   const body = kakaoLoginRequestSchema.parse(input)
 
   return parseResponse(
-    apiClient.post("auth/kakao/login", { json: body }),
+    apiClient.post("api/auth/kakao/login", { json: body }),
     kakaoLoginResponseSchema
   )
 }

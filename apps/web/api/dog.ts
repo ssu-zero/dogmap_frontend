@@ -9,19 +9,19 @@ import {
 } from "@/schema/dog"
 
 export function getMyDog() {
-  return parseResponse(apiClient.get("dogs/me"), dogSchema)
+  return parseResponse(apiClient.get("api/dogs/me"), dogSchema)
 }
 
 export async function registerDog(input: DogCreateRequest) {
   return parseResponse(
-    apiClient.post("dogs", { json: dogCreateRequestSchema.parse(input) }),
+    apiClient.post("api/dogs", { json: dogCreateRequestSchema.parse(input) }),
     signupCompleteResponseSchema
   )
 }
 
 export async function updateMyDog(input: DogUpdateRequest) {
   return parseResponse(
-    apiClient.patch("dogs/me", { json: dogUpdateRequestSchema.parse(input) }),
+    apiClient.patch("api/dogs/me", { json: dogUpdateRequestSchema.parse(input) }),
     dogSchema
   )
 }

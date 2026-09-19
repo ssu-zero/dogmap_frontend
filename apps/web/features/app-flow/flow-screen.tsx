@@ -20,9 +20,19 @@ import { useEffect, useRef, useState } from "react"
 
 import { getAccessToken, getSignupToken, setAccessToken } from "@/api/client"
 import {
+  courseDetailQueryOptions,
   createCourseMutationOptions,
+  courseQueryKeys,
+  myCoursesQueryOptions,
   nearbyCoursesQueryOptions,
+  savedCoursesQueryOptions,
+  saveCourseMutationOptions,
 } from "@/query/course"
+import {
+  updateWalkLogMutationOptions,
+  walkLogQueryKeys,
+  walkLogsQueryOptions,
+} from "@/query/log"
 import {
   dogQueryKeys,
   myDogQueryOptions,
@@ -118,6 +128,8 @@ function FlowScreen({
   const [profileError, setProfileError] = useState<string | null>(null)
   const registerDog = useMutation(registerDogMutationOptions())
   const createApiCourse = useMutation(createCourseMutationOptions())
+  const saveApiCourse = useMutation(saveCourseMutationOptions())
+  const updateWalkLog = useMutation(updateWalkLogMutationOptions())
   const updateDog = useMutation(updateMyDogMutationOptions())
   const myDog = useQuery({
     ...myDogQueryOptions(),
@@ -132,7 +144,34 @@ function FlowScreen({
     }),
     enabled:
       !demoMode &&
-      (screen === "home" || (screen === "course-detail" && Boolean(courseId))),
+      (screen === "home" ||
+        screen === "community" ||
+        (screen === "course-detail" && Boolean(courseId))),
+  })
+  const myCourses = useQuery({
+    ...myCoursesQueryOptions(),
+    enabled: hasAccessToken && !demoMode,
+  })
+  const savedCourses = useQuery({
+    ...savedCoursesQueryOptions(),
+    enabled: hasAccessToken && !demoMode,
+  })
+  const courseDetail = useQuery({
+    ...courseDetailQueryOptions(courseId ?? ""),
+    enabled:
+      hasAccessToken &&
+      !demoMode &&
+      Boolean(courseId) &&
+      (screen === "course-detail" ||
+        screen === "community-detail" ||
+        screen === "archive-detail"),
+  })
+  const walkLogs = useQuery({
+    ...walkLogsQueryOptions(),
+    enabled:
+      hasAccessToken &&
+      !demoMode &&
+      (screen === "archive" || screen === "archive-detail" || screen === "report"),
   })
   const [saved, setSaved] = useState(false)
   const [listOpen, setListOpen] = useState(false)
@@ -146,12 +185,34 @@ function FlowScreen({
     "전체" | "소형" | "중형" | "대형"
   >("전체")
 
-  const serverRecommendations = (nearbyCourses.data ?? []).map(
-    nearbyCourseToFlowCourse
+  const serverRecommendations = (nearbyCourses.data ?? []).map((item) =>
+    nearbyCourseToFlowCourse(item, user.id)
+  )
+  const serverMyCourses = (myCourses.data ?? []).map((item) =>
+    nearbyCourseToFlowCourse(item, user.id)
+  )
+  const serverSavedCourses = (savedCourses.data ?? []).map(
+    (item) => nearbyCourseToFlowCourse(item, user.id)
+  )
+  const serverDetailCourse = courseDetail.data
+    ? apiCourseToFlowCourse(courseDetail.data, user.id)
+    : undefined
+  const displayedCourses = demoMode
+    ? courses
+    : dedupeCourses([...serverMyCourses, ...serverSavedCourses, ...courses])
+  const archiveCourses = demoMode ? courses : dedupeCourses([...serverMyCourses, ...courses])
+  const logByCourseId = new Map(
+    (walkLogs.data ?? [])
+      .filter((log) => log.course_id !== null)
+      .map((log) => [String(log.course_id), log])
   )
   const course = findCourse(
     courseId,
-    [...courses, ...serverRecommendations],
+    [
+      ...(serverDetailCourse ? [serverDetailCourse] : []),
+      ...displayedCourses,
+      ...serverRecommendations,
+    ],
     demoMode
   )
   const ownCourse = course?.userId === user.id
@@ -215,6 +276,7 @@ function FlowScreen({
       .then((result) => {
         const generated = apiCourseToFlowCourse(result, user.id)
         addCourse(generated)
+        queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
         router.replace(`/courses/${generated.id}`)
       })
       .catch((error: Error) => {
@@ -643,7 +705,7 @@ function FlowScreen({
       <AppShell tab="course">
         <Header title="내 코스" />
         <section className="flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-6">
-          {courses.length === 0 ? (
+          {displayedCourses.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-8">
               <EmptyState
                 title="아직 만든 코스가 없어요"
@@ -656,7 +718,7 @@ function FlowScreen({
           ) : (
             <>
               <div className="space-y-3 py-5">
-                {courses.map((item) => (
+                {displayedCourses.map((item) => (
                   <button
                     className="w-full text-left"
                     key={item.id}
@@ -876,7 +938,12 @@ function FlowScreen({
           <p className="p-5">코스를 찾을 수 없어요.</p>
         </Plain>
       )
-    const diary = draftDiaries[course.id] ?? diaries[course.id] ?? ""
+    const serverLog = logByCourseId.get(course.id)
+    const diary =
+      draftDiaries[course.id] ??
+      serverLog?.diary ??
+      diaries[course.id] ??
+      ""
     return (
       <Plain>
         <Header
@@ -982,7 +1049,7 @@ function FlowScreen({
               <textarea
                 aria-label="여행 일기"
                 className="type-body-r-14 min-h-28 w-full rounded-xl border border-gray-150 bg-white p-3 focus:outline-none"
-                placeholder="오늘 {user.dogName}와 함께한 이야기를 남겨보세요."
+                placeholder={`오늘 ${user.dogName}와 함께한 이야기를 남겨보세요.`}
                 value={diary}
                 onChange={(event) =>
                   setDraftDiaries((previous) => ({
@@ -993,12 +1060,42 @@ function FlowScreen({
               />
               <Button
                 size="full"
-                disabled={!diary.trim()}
-                onClick={() => saveDiary(course.id, diary)}
+                disabled={!diary.trim() || updateWalkLog.isPending}
+                onClick={() => {
+                  if (demoMode) {
+                    saveDiary(course.id, diary)
+                    return
+                  }
+
+                  if (!serverLog) return
+                  updateWalkLog.mutate(
+                    { logId: serverLog.log_id, diary },
+                    {
+                      onSuccess: () => {
+                        setDraftDiaries((previous) => ({
+                          ...previous,
+                          [course.id]: diary,
+                        }))
+                        queryClient.invalidateQueries({
+                          queryKey: walkLogQueryKeys.all,
+                        })
+                      },
+                    }
+                  )
+                }}
               >
-                {diaries[course.id] ? "일기 수정하기" : "일기 저장하기"}
+                {updateWalkLog.isPending
+                  ? "저장 중"
+                  : serverLog?.diary || diaries[course.id]
+                    ? "일기 수정하기"
+                    : "일기 저장하기"}
               </Button>
-              {diaries[course.id] ? (
+              {!demoMode && !serverLog ? (
+                <p className="type-caption-r-12 text-gray-500">
+                  완료된 산책에서만 일기를 저장할 수 있어요.
+                </p>
+              ) : null}
+              {serverLog?.diary || diaries[course.id] ? (
                 <p className="type-caption-r-12 text-gray-500">
                   일기를 저장했어요.
                 </p>
@@ -1020,13 +1117,29 @@ function FlowScreen({
                 size="full"
                 variant={saved ? "secondary" : "primary"}
                 onClick={() => {
-                  saveCourse(course)
-                  setSaved(true)
+                  if (demoMode) {
+                    saveCourse(course)
+                    setSaved(true)
+                    return
+                  }
+
+                  saveApiCourse.mutate(course.id, {
+                    onSuccess: () => {
+                      setSaved(true)
+                      queryClient.invalidateQueries({
+                        queryKey: courseQueryKeys.saved,
+                      })
+                    },
+                  })
                 }}
               >
-                {saved ? "내 코스에 저장됨" : "내 코스에 저장"}
+                {saveApiCourse.isPending
+                  ? "저장 중"
+                  : saved || course.saved
+                    ? "내 코스에 저장됨"
+                    : "내 코스에 저장"}
               </Button>
-              {saved ? (
+              {saved || course.saved ? (
                 <Button
                   size="full"
                   variant="text"
@@ -1047,13 +1160,7 @@ function FlowScreen({
       <AppShell tab="community">
         <Header title="커뮤니티" />
         <section className="space-y-4 px-5 py-5">
-          {!demoMode ? (
-            <EmptyState
-              title="커뮤니티 연결을 준비하고 있어요"
-              description="현재 서버에는 커뮤니티 목록과 저장 API가 아직 없습니다."
-            />
-          ) : (
-            <>
+          <>
               <div
                 className="flex gap-2"
                 role="group"
@@ -1070,11 +1177,12 @@ function FlowScreen({
                   </Chip>
                 ))}
               </div>
-              {communityCourses
+              {(demoMode ? communityCourses : serverRecommendations)
                 .filter(
                   (item) =>
+                    !demoMode ||
                     communityFilter === "전체" ||
-                    item.dogSize === communityFilter
+                    ("dogSize" in item && item.dogSize === communityFilter)
                 )
                 .map((item) => (
                   <button
@@ -1092,8 +1200,7 @@ function FlowScreen({
                     />
                   </button>
                 ))}
-            </>
-          )}
+          </>
         </section>
       </AppShell>
     )
@@ -1106,14 +1213,14 @@ function FlowScreen({
             <h1 className="type-head-sb-24">{user.dogName}의 발자국</h1>
             <p className="type-body-sb-16 mt-2">지금까지의 여정</p>
           </div>
-          {courses.length === 0 ? (
+          {archiveCourses.length === 0 ? (
             <EmptyState
               title="아직 남긴 발자국이 없어요"
               description="첫 코스를 만들고 제로와의 여행을 기록해 보세요."
             />
           ) : (
             <section className="space-y-3" aria-label="여행 발자국">
-              {courses.map((item) => (
+              {archiveCourses.map((item) => (
                 <button
                   key={item.id}
                   className="w-full text-left"
@@ -1132,15 +1239,9 @@ function FlowScreen({
           <section className="rounded-2xl bg-gray-50 p-4">
             <h2 className="type-body-sb-16">이달의 활동</h2>
             <p className="type-body-r-14 mt-2 text-gray-500">
-              완성한 코스 {courses.length}개 · 새로운 발자국을 남겨보세요.
+              완성한 코스 {archiveCourses.length}개 · 새로운 발자국을 남겨보세요.
             </p>
           </section>
-          {!demoMode ? (
-            <p className="type-caption-r-12 text-gray-400">
-              발자국과 일기는 아직 서버에 저장되지 않고 현재 세션에만
-              유지됩니다.
-            </p>
-          ) : null}
           <Button
             size="full"
             variant="secondary"
@@ -1165,12 +1266,14 @@ function FlowScreen({
             <dl className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-white p-3">
                 <dt className="type-caption-r-12 text-gray-400">완성한 코스</dt>
-                <dd className="type-head-sb-24 mt-1">{courses.length}개</dd>
+                <dd className="type-head-sb-24 mt-1">{archiveCourses.length}개</dd>
               </div>
               <div className="rounded-xl bg-white p-3">
                 <dt className="type-caption-r-12 text-gray-400">남긴 일기</dt>
                 <dd className="type-head-sb-24 mt-1">
-                  {Object.keys(diaries).length}개
+                  {demoMode
+                    ? Object.keys(diaries).length
+                    : (walkLogs.data ?? []).filter((log) => log.diary).length}
                 </dd>
               </div>
             </dl>
@@ -1455,6 +1558,13 @@ function findCourse(
     (includeDemoCourses
       ? communityCourses.find((item) => item.id === id)
       : undefined)
+  )
+}
+
+function dedupeCourses(courses: Course[]) {
+  return courses.filter(
+    (course, index) =>
+      courses.findIndex((candidate) => candidate.id === course.id) === index
   )
 }
 

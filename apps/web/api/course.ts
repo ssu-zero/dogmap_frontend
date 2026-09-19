@@ -1,10 +1,13 @@
 import { apiClient, parseResponse } from "@/api/client"
 import {
   courseCreateRequestSchema,
+  courseSaveStatusSchema,
   courseSchema,
+  myCoursesSchema,
   nearbyCoursesParamsSchema,
   nearbyCoursesSchema,
   type CourseCreateRequest,
+  type Course,
   type NearbyCoursesParams,
 } from "@/schema/course"
 
@@ -12,16 +15,42 @@ export async function getNearbyCourses(input: NearbyCoursesParams) {
   const params = nearbyCoursesParamsSchema.parse(input)
 
   return parseResponse(
-    apiClient.get("api/v1/courses", { searchParams: params }),
+    apiClient.get("api/courses", { searchParams: params }),
     nearbyCoursesSchema
   )
 }
 
 export async function createCourse(input: CourseCreateRequest) {
   return parseResponse(
-    apiClient.post("api/v1/courses", {
+    apiClient.post("api/courses", {
       json: courseCreateRequestSchema.parse(input),
     }),
     courseSchema
+  )
+}
+
+export function getCourse(courseId: string) {
+  return parseResponse(apiClient.get(`api/courses/${courseId}`), courseSchema)
+}
+
+export function getMyCourses() {
+  return parseResponse(apiClient.get("api/dogs/me/courses"), myCoursesSchema)
+}
+
+export function getSavedCourses() {
+  return parseResponse(apiClient.get("api/saves"), myCoursesSchema)
+}
+
+export function saveCourse(courseId: string) {
+  return parseResponse(
+    apiClient.post(`api/courses/${courseId}/save`),
+    courseSaveStatusSchema
+  )
+}
+
+export function unsaveCourse(courseId: string) {
+  return parseResponse(
+    apiClient.delete(`api/courses/${courseId}/save`),
+    courseSaveStatusSchema
   )
 }
