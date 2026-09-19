@@ -117,6 +117,28 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
     .toBe("access-from-server")
 })
 
+test("shows the backend login message when Kakao login is rejected", async ({
+  page,
+}) => {
+  await useLiveApiMode(page)
+  await page.route("**/backend-api/api/auth/kakao/login", async (route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "카카오 인증이 만료되었어요." }),
+    })
+  })
+
+  await page.goto("/auth/kakao/callback?code=expired-kakao-code")
+
+  await expect(
+    page.getByRole("heading", { name: "로그인을 완료하지 못했어요" })
+  ).toBeVisible()
+  await expect(page.getByText("카카오 인증이 만료되었어요.")).toBeVisible()
+  await page.getByRole("button", { name: "다시 로그인" }).click()
+  await expect(page).toHaveURL(/\/login$/)
+})
+
 test("registers the onboarding dog with the signup token", async ({ page }) => {
   await useLiveApiMode(page)
   let registrationBody: Record<string, unknown> | undefined

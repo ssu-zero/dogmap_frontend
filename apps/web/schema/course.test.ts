@@ -9,6 +9,7 @@ describe("course schemas", () => {
       start_lng: 126.978,
       target_duration_minutes: 60,
       category_targets: [{ category: "WALK", count: 2 }],
+      walk_date: "2026-09-20T10:00:00+09:00",
     })
 
     expect(result.success).toBe(true)
