@@ -40,6 +40,7 @@ import {
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
+import { fallbackCoordinates, KakaoCourseMap } from "./kakao-course-map"
 import {
   communityCourses,
   courseDurations,
@@ -913,14 +914,12 @@ function FlowScreen({
               {course.placeCount ?? course.places.length}곳
             </p>
           </div>
-          <button
-            type="button"
-            className="flex h-44 w-full items-center justify-center rounded-2xl bg-gray-100 text-gray-400"
-            aria-label="코스 지도 보기"
-            onClick={() => setSelectedPlace(course.places[0] ?? null)}
-          >
-            지도에서 스팟 보기
-          </button>
+          <KakaoCourseMap
+            center={course.startCoordinates ?? fallbackCoordinates}
+            path={course.path}
+            places={course.places}
+            onSelectPlace={setSelectedPlace}
+          />
           {selectedPlace ? (
             <section
               className="rounded-xl bg-red-50 p-4"
