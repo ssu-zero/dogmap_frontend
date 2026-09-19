@@ -320,33 +320,30 @@ function FlowScreen({
   if (screen === "login") {
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col px-5 py-12">
-          <div className="flex flex-1 flex-col items-center justify-center pb-16 text-center">
+        <section className="relative flex min-h-svh flex-col overflow-hidden px-5 py-12">
+          <div className="flex flex-1 flex-col items-center pt-26 text-center">
+            <p className="type-body-sb-16 text-gray-600">반려동물 맞춤 산책코스</p>
             <Image
-              src="/img/dog.png"
-              alt="여행 가방을 든 반려견"
-              width={153}
-              height={180}
-              className="h-[180px] w-[153px] object-contain"
-            />
-            <Image
-              src="/logo/with_paw.png"
+              src="/logo/main.png"
               alt="개동여지도"
-              width={180}
-              height={44}
-              className="mt-7 h-11 w-[180px]"
+              width={230}
+              height={69}
+              priority
+              className="mt-4 h-[69px] w-[230px] object-contain"
             />
-            <h1 className="type-head-sb-24 mt-5">개동여지도</h1>
-            <p className="type-body-r-16 mt-3 text-gray-500">
-              반려동물과 떠나는
-              <br />
-              맞춤 여행 코스
-            </p>
           </div>
+          <Image
+            src="/img/dog_home.png"
+            alt="여행을 준비하는 반려견"
+            width={136}
+            height={157}
+            priority
+            className="pointer-events-none absolute right-9 bottom-26 h-[157px] w-[136px] object-contain"
+          />
           <div className="space-y-2">
             <Button
-              size="full"
-              className="rounded-lg bg-[#fee500] text-gray-900 hover:bg-[#fee500]"
+              size="md"
+              className="h-12 w-full rounded-xl bg-[#fee500] text-gray-900 hover:bg-[#fee500]"
               onClick={() => {
                 if (demoMode) {
                   router.push("/terms")
@@ -630,6 +627,7 @@ function FlowScreen({
             alt="개동여지도"
             width={124}
             height={30}
+            priority
             className="h-[30px] w-[124px] brightness-0 invert"
           />
           <Image
@@ -637,6 +635,7 @@ function FlowScreen({
             alt="여행을 준비하는 반려견"
             width={206}
             height={260}
+            priority
             className="pointer-events-none absolute right-[-8px] top-14 h-[210px] w-auto object-contain"
           />
           <div className="relative mt-11 space-y-6">
