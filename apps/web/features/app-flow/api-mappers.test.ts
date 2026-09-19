@@ -39,6 +39,7 @@ describe("app-flow API mappers", () => {
         { category: "CAFE", count: 1 },
       ],
       title: "성수 산책",
+      walk_date: "2026-09-14T10:00:00+09:00",
     })
   })
 
@@ -50,6 +51,7 @@ describe("app-flow API mappers", () => {
           title: "서버 코스",
           start_lat: 37.5,
           start_lng: 127.1,
+          walk_date: "2026-09-14T10:00:00+09:00",
           total_distance_meters: 1200,
           total_duration_minutes: 61.5,
           path: [[37.5, 127.1]],
@@ -65,8 +67,16 @@ describe("app-flow API mappers", () => {
               stay_minutes: 20,
               travel_minutes: 10,
               travel_distance_meters: 300,
+              visit_time: null,
             },
           ],
+          is_owner: true,
+          is_shared: false,
+          like_count: 0,
+          is_liked: false,
+          save_count: 0,
+          is_saved: false,
+          generation_duration_ms: null,
         },
         "42"
       )

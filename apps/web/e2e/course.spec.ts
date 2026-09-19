@@ -32,10 +32,7 @@ test("creates a course from the empty state and adds it to my course list", asyn
     page.getByRole("heading", { name: "제로의 성수 산책" })
   ).toBeVisible({ timeout: 5_000 })
   await expect(page.getByText("약 90분 · 3곳")).toBeVisible()
-  await page.getByRole("button", { name: "코스 지도 보기" }).click()
-  await expect(page.getByRole("dialog", { name: "스팟 상세" })).toBeVisible()
-  await page.getByRole("button", { name: "닫기" }).click()
-  await expect(page.getByRole("dialog", { name: "스팟 상세" })).toHaveCount(0)
+  await expect(page.getByRole("region", { name: "코스 지도" })).toBeVisible()
 
   await page.getByRole("button", { name: "내 코스 목록 보기" }).click()
   await expect(

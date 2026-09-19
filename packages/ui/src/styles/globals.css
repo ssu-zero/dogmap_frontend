@@ -284,14 +284,24 @@ select:focus-visible {
 
   .layout-mobile {
     width: 100%;
-    padding-inline: var(--layout-mobile-gutter);
+    min-height: 100svh;
   }
 }
 
 @media (min-width: 376px) and (pointer: fine) {
+  body {
+    background: var(--color-gray-50);
+  }
+
   .layout-mobile {
     width: 375px;
+    height: 812px;
+    min-height: 812px;
     margin-inline: auto;
+    margin-block: max(0px, calc((100dvh - 812px) / 2));
+    overflow-y: auto;
+    background: var(--color-white);
+    box-shadow: 0 12px 40px rgb(21 21 21 / 12%);
   }
 }
 
