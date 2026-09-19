@@ -1330,8 +1330,8 @@ function FlowScreen({
                 <dt className="type-caption-r-12 text-gray-400">남긴 일기</dt>
                 <dd className="type-head-sb-24 mt-1">
                   {demoMode
-                    ? Object.keys(diaries).length
-                    : (walkLogs.data ?? []).filter((log) => log.diary).length}
+                    ? `${Object.keys(diaries).length}개`
+                    : `${(walkLogs.data ?? []).filter((log) => log.diary).length}개`}
                 </dd>
               </div>
             </dl>
