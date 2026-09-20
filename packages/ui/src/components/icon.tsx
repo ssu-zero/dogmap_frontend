@@ -7,6 +7,8 @@ const iconSources = {
   arrowLeft: new URL("../svg/arrow/left.svg", import.meta.url).href,
   arrowRight: new URL("../svg/arrow/right.svg", import.meta.url).href,
   bookmarkFill: new URL("../svg/bookmark_fill.svg", import.meta.url).href,
+  bookmarkChipDefault: new URL("../svg/bookmark_chip_default.svg", import.meta.url).href,
+  bookmarkChipSelected: new URL("../svg/bookmark_chip_selected.svg", import.meta.url).href,
   bookmarkLine: new URL("../svg/bookmark_line.svg", import.meta.url).href,
   bone: new URL("../svg/illust/bone.svg", import.meta.url).href,
   chatFill: new URL("../svg/chat_fill.svg", import.meta.url).href,

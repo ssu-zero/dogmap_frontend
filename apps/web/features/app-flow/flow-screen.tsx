@@ -1141,7 +1141,9 @@ function FlowScreen({
                     ? "pawChipSelected"
                     : "pawChipDefault"
                   : filter === "내가 저장한"
-                    ? "bookmarkFill"
+                    ? active
+                      ? "bookmarkChipSelected"
+                      : "bookmarkChipDefault"
                     : null
 
               return (
@@ -1157,7 +1159,7 @@ function FlowScreen({
                   {iconName ? (
                     <Icon
                       name={iconName}
-                      className={`size-5 ${filter === "내가 만든" ? "" : active ? "invert opacity-[0.97]" : "opacity-[0.36]"}`}
+                      className="size-5"
                     />
                   ) : null}
                 </button>
