@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   apiCourseToFlowCourse,
+  courseAfterRemovingSpots,
   courseDraftToApiRequest,
   onboardingToDogCreate,
 } from "./api-mappers"
@@ -87,5 +88,64 @@ describe("app-flow API mappers", () => {
       duration: 62,
       places: ["서울숲"],
     })
+  })
+
+  it("removes a spot, resequences the rest, and drops its old route segment", () => {
+    const course = {
+      course_id: 42,
+      title: "산책 코스",
+      start_lat: 37.5,
+      start_lng: 127.1,
+      walk_date: "2026-09-14T10:00:00+09:00",
+      total_distance_meters: 500,
+      total_duration_minutes: 60,
+      path: [
+        [37.5, 127.1],
+        [37.501, 127.101],
+        [37.502, 127.102],
+      ] as [number, number][],
+      places: [
+        {
+          place_id: 1,
+          name: "삭제할 스팟",
+          category: "PARK" as const,
+          image_url: null,
+          lat: 37.501,
+          lng: 127.101,
+          sequence: 1,
+          stay_minutes: 20,
+          travel_minutes: 5,
+          travel_distance_meters: 200,
+          visit_time: null,
+        },
+        {
+          place_id: 2,
+          name: "남길 스팟",
+          category: "CAFE" as const,
+          image_url: null,
+          lat: 37.502,
+          lng: 127.102,
+          sequence: 2,
+          stay_minutes: 30,
+          travel_minutes: 5,
+          travel_distance_meters: 300,
+          visit_time: null,
+        },
+      ],
+      is_owner: true,
+      is_shared: false,
+      like_count: 0,
+      is_liked: false,
+      save_count: 0,
+      is_saved: false,
+    }
+
+    const result = courseAfterRemovingSpots(course, [0])
+    expect(result.places).toHaveLength(1)
+    expect(result.places[0]).toMatchObject({ place_id: 2, sequence: 1 })
+    expect(result.path).toEqual([
+      [37.5, 127.1],
+      [37.502, 127.102],
+    ])
   })
 })
