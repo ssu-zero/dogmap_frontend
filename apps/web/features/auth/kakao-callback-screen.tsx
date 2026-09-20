@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query"
 import { Button } from "@workspace/ui/components/button"
-import { Loading } from "@workspace/ui/components/loading"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef } from "react"
 
@@ -73,20 +73,85 @@ export function KakaoCallbackScreen({ code }: { code?: string }) {
       ? login.error.message
       : null
 
+  if (errorMessage) {
+    return (
+      <main className="layout-mobile flex flex-col items-center justify-center gap-6 bg-white px-5 text-center">
+        <h1 className="type-head-sb-20">로그인을 완료하지 못했어요</h1>
+        <p className="type-body-r-14 text-gray-500">{errorMessage}</p>
+        <Button onClick={() => router.replace("/login")}>다시 로그인</Button>
+      </main>
+    )
+  }
+
   return (
-    <main className="layout-mobile flex flex-col items-center justify-center gap-6 bg-white px-5 text-center">
-      {errorMessage ? (
-        <>
-          <h1 className="type-head-sb-20">로그인을 완료하지 못했어요</h1>
-          <p className="type-body-r-14 text-gray-500">{errorMessage}</p>
-          <Button onClick={() => router.replace("/login")}>다시 로그인</Button>
-        </>
-      ) : (
-        <>
-          <Loading state="ing" />
-          <h1 className="type-head-sb-20">카카오 로그인을 확인하고 있어요</h1>
-        </>
-      )}
+    <main
+      className="layout-mobile relative overflow-hidden bg-red-600"
+      role="status"
+      aria-label="카카오 로그인 확인 중"
+    >
+      <span className="sr-only">카카오 로그인을 확인하고 있어요.</span>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[-123px] top-[62px] flex h-[377px] w-[620px] items-center justify-center"
+      >
+        <Image
+          src="/img/splash-journey.svg"
+          alt=""
+          width={585}
+          height={236}
+          priority
+          className="h-[236px] w-[585px] max-w-none -rotate-15"
+        />
+      </div>
+      <Image
+        src="/img/splash-paw-large.svg"
+        alt=""
+        width={31}
+        height={28}
+        priority
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[40px] top-[236px] h-[28px] w-[31px] rotate-[41deg]"
+      />
+      <Image
+        src="/img/splash-paw-small.svg"
+        alt=""
+        width={23}
+        height={21}
+        priority
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[81px] top-[242px] h-[21px] w-[23px] rotate-[50deg]"
+      />
+      <Image
+        src="/img/splash-paw-large.svg"
+        alt=""
+        width={31}
+        height={28}
+        priority
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[249px] top-[339px] h-[28px] w-[31px] rotate-[41deg]"
+      />
+      <Image
+        src="/img/splash-paw-small.svg"
+        alt=""
+        width={23}
+        height={21}
+        priority
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[291px] top-[343px] h-[21px] w-[23px] rotate-[50deg]"
+      />
+      <div className="pointer-events-none absolute inset-x-0 bottom-[112px] flex flex-col items-center gap-[7px] text-center">
+        <p className="type-body-r-16 tracking-[-0.01em] text-gray-50">
+          반려동물 맞춤 산책코스
+        </p>
+        <Image
+          src="/logo/login-main.svg"
+          alt="개동여지도"
+          width={92}
+          height={23}
+          priority
+          className="h-[23px] w-[92px] object-contain"
+        />
+      </div>
     </main>
   )
 }

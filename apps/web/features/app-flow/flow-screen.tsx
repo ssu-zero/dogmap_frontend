@@ -290,7 +290,6 @@ function FlowScreen({
     null
   )
   const [courseToast, setCourseToast] = useState<string | null>(null)
-  const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
   const [dogSize, setDogSize] = useState<"SMALL" | "MEDIUM" | "LARGE">("SMALL")
@@ -1259,6 +1258,17 @@ function FlowScreen({
               homePlacePreviews.map((place) => (
                 <HomePlaceCard key={place.id} {...place} />
               ))
+            ) : homeLocationUnavailable ? (
+              <p className="type-body-r-14 text-gray-400">
+                현재 위치를 허용하면 주변 동반 가능시설을 알려드려요.
+              </p>
+            ) : homePlacesPending ? (
+              <div role="status" aria-label="주변 장소를 불러오는 중" className="space-y-3">
+                <span className="sr-only">주변 장소를 불러오고 있어요.</span>
+                {Array.from({ length: 3 }, (_, index) => (
+                  <HomePlaceCardSkeleton key={index} />
+                ))}
+              </div>
             ) : homePlaces.length ? (
               homePlaces.slice(0, 3).map((place) => (
                 <HomePlaceCard
@@ -1273,12 +1283,6 @@ function FlowScreen({
                   lng={place.lng}
                 />
               ))
-            ) : homePlacesPending ? (
-              <p className="type-body-r-14 text-gray-400">주변 장소를 불러오고 있어요.</p>
-            ) : homeLocationUnavailable ? (
-              <p className="type-body-r-14 text-gray-400">
-                현재 위치를 허용하면 주변 동반 가능시설을 알려드려요.
-              </p>
             ) : homePlacesError ? (
               <p className="type-body-r-14 text-gray-400">
                 주변 동반 가능시설을 불러오지 못했어요.
@@ -1423,7 +1427,7 @@ function FlowScreen({
                       title={item.title}
                       hours={item.duration / 60}
                       spots={item.placeCount ?? item.places.length}
-                      createdAt={item.createdAt ?? item.date?.replaceAll("-", ".")}
+                      createdAt={item.createdAt}
                     />
                   </button>
                   ))}
@@ -2472,7 +2476,7 @@ function FlowScreen({
     }
     return (
       <Plain>
-        <section className="flex min-h-[inherit] flex-col bg-gray-50">
+        <section className="flex min-h-[inherit] flex-col bg-white">
           <div className="relative h-84 shrink-0 overflow-hidden">
             <KakaoCourseMap
               className="size-full"
@@ -2494,14 +2498,19 @@ function FlowScreen({
               onBack={() => router.push("/community")}
             />
             {ownCourse ? (
-              <span className="type-body-r-13 absolute bottom-32 left-5 z-[2] rounded-full bg-gray-900/75 px-3 py-1 text-white">
+              <span className="type-body-r-14 absolute bottom-32 left-5 z-[2] inline-flex items-center gap-0.5 rounded-full bg-black/50 px-3 py-1 text-white">
+                <span
+                  aria-hidden="true"
+                  className="size-5 bg-white"
+                  style={{ mask: `url(${iconSources.pawFill}) center / contain no-repeat` }}
+                />
                 내가 만든 코스
               </span>
             ) : null}
           </div>
-          <section className="relative -mt-28 flex flex-1 flex-col rounded-t-2xl bg-gray-50 px-5 pt-6 pb-6">
+          <section className="relative -mt-28 flex flex-1 flex-col rounded-t-[20px] bg-white px-5 pt-6 pb-6">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 space-y-4">
+              <div className="min-w-0 flex-1 space-y-3">
                 <h1 className="type-head-sb-22 text-gray-800">{course.title}</h1>
                 {communityLike.count > 0 ? (
                   <PawActivity count={communityLike.count} />
@@ -2516,10 +2525,10 @@ function FlowScreen({
                     aria-label="코스 메뉴"
                     aria-haspopup="menu"
                     aria-expanded={courseMenuOpen}
-                    className="flex size-6 items-center justify-center"
+                    className="flex size-7 items-center justify-center"
                     onClick={() => setCourseMenuOpen((open) => !open)}
                   >
-                    <Icon name="more" className="size-6" />
+                    <Icon name="more" className="size-7" />
                   </button>
                   {courseMenuOpen ? (
                     <>
@@ -2536,12 +2545,12 @@ function FlowScreen({
                 <span
                   role="img"
                   aria-label={isCourseSaved ? "저장한 코스" : "저장하지 않은 코스"}
-                  className={`size-6 shrink-0 ${isCourseSaved ? "bg-red-800" : "bg-gray-150"}`}
+                  className={`size-7 shrink-0 ${isCourseSaved ? "bg-red-800" : "bg-gray-150"}`}
                   style={{ mask: `url(${iconSources[isCourseSaved ? "bookmarkFill" : "bookmarkLine"]}) center / contain no-repeat` }}
                 />
               )}
             </div>
-            <section aria-label="코스 스팟" className="mt-6">
+            <section aria-label="코스 스팟" className="mt-8">
               {course.places.map((place, index) => (
                 <TimelineSpot
                   key={`${course.id}-${index}`}
@@ -2564,7 +2573,7 @@ function FlowScreen({
             {courseActionError ? <p role="alert" className="type-body-r-14 mt-3 text-red-600">{courseActionError}</p> : null}
             {courseToast ? <p role="status" className="type-body-r-14 mt-3 text-gray-500">{courseToast}</p> : null}
             {!ownCourse ? (
-              <div className="mt-auto flex items-center gap-3 pt-6">
+              <div className="sticky bottom-0 z-10 -mx-5 mt-auto flex items-center gap-3 bg-gradient-to-b from-white/0 via-white to-white px-5 pt-10 pb-6">
                 <LikeButton
                   aria-label="코스 좋아요"
                   pressed={communityLike.liked}
@@ -3034,7 +3043,6 @@ function FlowScreen({
             event.preventDefault()
             if (demoMode) {
               updateUser({
-                name: name.trim(),
                 age: age.trim(),
                 dogName: dogName.trim(),
               })
@@ -3108,23 +3116,6 @@ function FlowScreen({
             />
           </label>
           <label className="block space-y-2">
-            <span className="type-body-sb-14">
-              {demoMode ? "보호자 이름" : "카카오 닉네임"}
-            </span>
-            <TextField
-              aria-label="보호자 이름"
-              state="completed"
-              value={name}
-              readOnly={!demoMode}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {!demoMode ? (
-              <p className="type-caption-r-12 text-gray-400">
-                보호자 닉네임은 카카오 계정에서 관리해요.
-              </p>
-            ) : null}
-          </label>
-          <label className="block space-y-2">
             <span className="type-body-sb-14">반려견 이름</span>
             <TextField
               aria-label="반려견 이름 수정"
@@ -3168,7 +3159,6 @@ function FlowScreen({
             size="full"
             type="submit"
             disabled={
-              !name.trim() ||
               !dogName.trim() ||
               !age.replace(/\D/g, "") ||
               (!demoMode && !hasAccessToken) ||
@@ -3331,6 +3321,24 @@ function HomePlaceCard({
         className="size-19 shrink-0 rounded-xl object-cover"
       />
     </a>
+  )
+}
+
+function HomePlaceCardSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex min-h-[104px] items-center justify-between gap-3 rounded-[20px] border border-gray-100 bg-gray-50/50 px-4 py-3"
+    >
+      <div className="min-w-0 flex-1 animate-pulse space-y-3 motion-reduce:animate-none">
+        <div className="h-5 w-3/4 rounded-md bg-gray-150/60" />
+        <div className="space-y-1.5">
+          <div className="h-4 w-full rounded-md bg-gray-100" />
+          <div className="h-4 w-4/5 rounded-md bg-gray-100" />
+        </div>
+      </div>
+      <div className="size-19 shrink-0 animate-pulse rounded-xl bg-gray-150/60 motion-reduce:animate-none" />
+    </div>
   )
 }
 
