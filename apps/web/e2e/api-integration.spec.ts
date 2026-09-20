@@ -109,7 +109,10 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
   await expect(
     page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
-  expect(loginBody).toEqual({ code: "kakao-code" })
+  expect(loginBody).toMatchObject({
+    code: "kakao-code",
+    redirect_uri: "http://127.0.0.1:3001/auth/kakao/callback",
+  })
   await expect
     .poll(() =>
       page.evaluate(() => localStorage.getItem("dogmap.access-token"))
