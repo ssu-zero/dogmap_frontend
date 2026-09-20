@@ -659,8 +659,8 @@ function FlowScreen({
     const detail = termsContent[selectedTerm]
     return (
       <Plain>
-        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white pt-[62px]">
-          <header className="flex h-[60px] shrink-0 items-center px-5 py-3">
+        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white pt-[var(--figma-safe-area-top)]">
+          <header className="flex h-[60px] shrink-0 items-center px-4 py-3">
             <button
               type="button"
               onClick={() => router.back()}
