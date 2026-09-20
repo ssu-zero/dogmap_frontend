@@ -3,7 +3,7 @@ import Image from "next/image"
 
 export default function NotFound() {
   return (
-    <main className="layout-mobile flex min-h-svh flex-col items-center justify-center gap-2 bg-gray-50 px-5 text-center">
+    <main className="layout-mobile flex flex-col items-center justify-center gap-2 bg-gray-50 px-5 text-center">
       <Image
         src="/img/dog.png"
         alt="길을 찾는 반려견"

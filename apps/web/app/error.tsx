@@ -15,7 +15,7 @@ export default function Error({
     console.error(error)
   }, [error])
   return (
-    <main className="layout-mobile flex min-h-svh flex-col items-center justify-center gap-4 bg-white px-5 text-center">
+    <main className="layout-mobile flex flex-col items-center justify-center gap-4 bg-white px-5 text-center">
       <Image
         src="/img/dog.png"
         alt="문제를 확인하는 반려견"

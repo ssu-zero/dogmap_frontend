@@ -48,7 +48,7 @@ function AppShell({
   const pathname = usePathname()
 
   return (
-    <main className="layout-mobile flex min-h-svh flex-col bg-white">
+    <main className="layout-mobile flex flex-col bg-white">
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       {tab ? (
         <BottomNavigation

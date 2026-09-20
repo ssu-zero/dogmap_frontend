@@ -74,7 +74,7 @@ export function KakaoCallbackScreen({ code }: { code?: string }) {
       : null
 
   return (
-    <main className="layout-mobile flex min-h-svh flex-col items-center justify-center gap-6 bg-white px-5 text-center">
+    <main className="layout-mobile flex flex-col items-center justify-center gap-6 bg-white px-5 text-center">
       {errorMessage ? (
         <>
           <h1 className="type-head-sb-20">로그인을 완료하지 못했어요</h1>

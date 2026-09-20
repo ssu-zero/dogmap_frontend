@@ -346,7 +346,7 @@ function FlowScreen({
   if (screen === "login") {
     return (
       <Plain>
-        <section className="relative flex min-h-svh flex-col bg-red-600 px-5 pb-6 pt-40">
+        <section className="relative flex min-h-[inherit] flex-col bg-red-600 px-5 pb-6 pt-40">
           <div className="flex flex-col items-center text-center">
             <p className="type-body-r-16 text-gray-50">반려동물 맞춤 산책코스</p>
             <Image
@@ -573,7 +573,7 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="relative flex min-h-svh flex-col px-5 pt-[62px]">
+        <section className="relative flex min-h-[inherit] flex-col px-5 pt-[62px]">
           <header className="-mx-5 flex h-[60px] shrink-0 items-center px-5">
             <button
               type="button"
@@ -659,7 +659,7 @@ function FlowScreen({
     const detail = termsContent[selectedTerm]
     return (
       <Plain>
-        <section className="relative flex h-svh max-h-svh min-h-[inherit] flex-col overflow-hidden bg-white pt-[62px]">
+        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white pt-[62px]">
           <header className="flex h-[60px] shrink-0 items-center px-5 py-3">
             <button
               type="button"
@@ -1053,7 +1053,7 @@ function FlowScreen({
   if (screen === "generating")
     return (
       <Plain>
-        <section className="flex min-h-svh flex-col justify-center gap-8 px-8">
+        <section className="flex min-h-[inherit] flex-col justify-center gap-8 px-8">
           <LoadingSteps steps={["past", "current", "upcoming"]} />
           <div>
             <h1 className="type-head-sb-24">
@@ -1676,7 +1676,7 @@ function FlowScreen({
 
   return (
     <Plain>
-      <section className="flex min-h-svh flex-col items-center justify-center gap-5 px-5 text-center">
+      <section className="flex min-h-[inherit] flex-col items-center justify-center gap-5 px-5 text-center">
         <Image
           src="/img/dog.png"
           alt="문제를 확인하는 반려견"
@@ -1702,7 +1702,7 @@ function FlowScreen({
 }
 
 function Plain({ children }: { children: React.ReactNode }) {
-  return <main className="layout-mobile min-h-svh bg-white">{children}</main>
+  return <main className="layout-mobile bg-white">{children}</main>
 }
 
 function TermRow({

@@ -284,7 +284,9 @@ select:focus-visible {
 
   .layout-mobile {
     width: 100%;
-    min-height: 100svh;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow-y: auto;
   }
 }
 
@@ -295,8 +297,8 @@ select:focus-visible {
 
   .layout-mobile {
     width: 375px;
-    height: 812px;
-    min-height: 812px;
+    height: min(812px, 100dvh);
+    min-height: min(812px, 100dvh);
     margin-inline: auto;
     margin-block: max(0px, calc((100dvh - 812px) / 2));
     overflow-y: auto;
