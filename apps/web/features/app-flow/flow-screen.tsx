@@ -74,6 +74,12 @@ import {
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
+import {
+  formatCourseCreatedAt,
+  getBrowserCourseDateStorage,
+  readCourseCreatedDates,
+  saveCourseCreatedDate,
+} from "./course-created-at-storage"
 import { kakaoPlaceUrl } from "./place-links"
 import {
   CourseGenerationScreen,
@@ -202,6 +208,10 @@ function FlowScreen({
   const [generationMinimumElapsed, setGenerationMinimumElapsed] =
     useState(false)
   const [generatedCourse, setGeneratedCourse] = useState<Course | null>(null)
+  const [localCreatedDates, setLocalCreatedDates] =
+    useState<Record<string, string>>(() =>
+      readCourseCreatedDates(getBrowserCourseDateStorage())
+    )
   const [generationRevealing, setGenerationRevealing] = useState(false)
   const dogHydrated = useRef(false)
   const homeLocationPromptShown = useRef(false)
@@ -420,9 +430,13 @@ function FlowScreen({
   const serverRecommendations = (nearbyCourses.data ?? []).map((item) =>
     nearbyCourseToFlowCourse(item, user.id)
   )
-  const serverMyCourses = (myCourses.data ?? []).map((item) =>
-    nearbyCourseToFlowCourse(item, user.id)
-  )
+  const serverMyCourses = (myCourses.data ?? []).map((item) => {
+    const course = nearbyCourseToFlowCourse(item, user.id)
+    return {
+      ...course,
+      createdAt: course.createdAt ?? localCreatedDates[course.id],
+    }
+  })
   const serverOwnSharedCourses = sharedOwnedCoursesFromSummaries(
     myCourses.data ?? [],
     mySharedCourseDetails.map((query) => query.data),
@@ -582,13 +596,25 @@ function FlowScreen({
         )
       )
       .then(async (result) => {
+        const courseId = String(result.course_id)
+        const createdAt = formatCourseCreatedAt(new Date())
+        setLocalCreatedDates(
+          saveCourseCreatedDate(
+            getBrowserCourseDateStorage(),
+            courseId,
+            createdAt
+          )
+        )
         const finalized = await replaceCoursePlaces.mutateAsync({
-          courseId: String(result.course_id),
+          courseId,
           places: result.places,
           path: result.path,
           endedAt: `${courseDraft.date}T${courseDraft.endTime || "00:00"}:00+09:00`,
         })
-        const generated = apiCourseToFlowCourse(finalized, user.id)
+        const generated = {
+          ...apiCourseToFlowCourse(finalized, user.id),
+          createdAt,
+        }
         addCourse(generated)
         queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
         setGeneratedCourse(generated)
