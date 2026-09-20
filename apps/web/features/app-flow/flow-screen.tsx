@@ -573,8 +573,8 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="relative flex min-h-[inherit] flex-col overflow-hidden px-5 pb-8 pt-[62px]">
-          <header className="-mx-5 flex h-[60px] items-center px-5">
+        <section className="relative flex h-svh max-h-svh min-h-[inherit] flex-col overflow-hidden px-5 pt-[62px]">
+          <header className="-mx-5 flex h-[60px] shrink-0 items-center px-5">
             <button
               type="button"
               onClick={() => router.back()}
@@ -596,7 +596,7 @@ function FlowScreen({
               {"개동여지도 약관을\n확인하고 동의해주세요."}
             </h1>
           </div>
-          <div className="mt-[232px] flex flex-col gap-6">
+          <div className="mt-auto flex shrink-0 flex-col gap-6 pb-8 pt-6">
             <div className="flex flex-col gap-5">
               <button
                 className="type-body-sb-16 flex h-12 w-full items-center gap-3 border-b border-gray-150 p-3 text-left text-gray-700"
