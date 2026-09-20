@@ -43,12 +43,34 @@ export const initialCourseDraft: CourseDraft = {
   themes: ["식당"],
 }
 
+function courseTimeInMinutes(time: string): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+export function minimumCourseEndTime(startTime: string): string | null {
+  const startMinutes = courseTimeInMinutes(startTime)
+  if (startMinutes === null || startMinutes + 60 >= 24 * 60) return null
+  const endMinutes = startMinutes + 60
+  return `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`
+}
+
+export function isValidCourseTimeRange(startTime: string, endTime: string) {
+  const startMinutes = courseTimeInMinutes(startTime)
+  const endMinutes = courseTimeInMinutes(endTime)
+  return (
+    startMinutes !== null &&
+    endMinutes !== null &&
+    endMinutes - startMinutes >= 60
+  )
+}
+
 export function isCourseDraftComplete(draft: CourseDraft) {
   return (
     Boolean(draft.title.trim()) &&
     Boolean(draft.date) &&
-    Boolean(draft.startTime) &&
-    Boolean(draft.endTime) &&
+    isValidCourseTimeRange(draft.startTime, draft.endTime) &&
     Boolean(draft.startLocation.trim()) &&
     Boolean(draft.duration) &&
     draft.themes.length > 0

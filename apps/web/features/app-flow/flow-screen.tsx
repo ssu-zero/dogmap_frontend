@@ -81,7 +81,9 @@ import {
   isDogInfoComplete,
   isDogNameValid,
   isCourseDraftComplete,
+  isValidCourseTimeRange,
   homePlacePreviews,
+  minimumCourseEndTime,
   requiredTermKeys,
   termsContent,
   toggleCourseTheme,
@@ -424,6 +426,13 @@ function FlowScreen({
         ? `${courseDraft.startLocation.trim() || "현재 위치"}에 적절한 코스가 없습니다.`
         : generationError
       : null
+  const earliestCourseEndTime = minimumCourseEndTime(courseDraft.startTime)
+  const invalidCoursePickerTime =
+    coursePicker === "startTime"
+      ? minimumCourseEndTime(coursePickerValue) === null
+      : coursePicker === "endTime"
+        ? !isValidCourseTimeRange(courseDraft.startTime, coursePickerValue)
+        : false
   const activeDogSize = myDog.data?.size ?? dogSize
   const activeDogSizeLabel =
     activeDogSize === "SMALL"
@@ -1395,10 +1404,19 @@ function FlowScreen({
                       </span>
                       <button
                         type="button"
-                        className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)]"
+                        aria-label={[label, period, value]
+                          .filter(Boolean)
+                          .join(" ")}
+                        disabled={field === "endTime" && !earliestCourseEndTime}
+                        className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)] disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => {
                           setCoursePicker(field)
-                          setCoursePickerValue(courseDraft[field] || "13:00")
+                          setCoursePickerValue(
+                            courseDraft[field] ||
+                              (field === "endTime"
+                                ? earliestCourseEndTime ?? ""
+                                : "13:00")
+                          )
                         }}
                       >
                         <span className="type-body-r-14 inline-flex items-center gap-0.5 whitespace-nowrap text-gray-600">
@@ -1508,22 +1526,46 @@ function FlowScreen({
                 <TextField
                   aria-label={coursePicker === "date" ? "날짜 선택" : "시간 선택"}
                   type={coursePicker === "date" ? "date" : "time"}
+                  min={
+                    coursePicker === "endTime"
+                      ? earliestCourseEndTime ?? undefined
+                      : undefined
+                  }
+                  max={coursePicker === "startTime" ? "22:59" : undefined}
                   className="h-14 rounded-xl border-gray-150 px-5 text-center"
                   state="completed"
                   value={coursePickerValue}
                   onChange={(event) => setCoursePickerValue(event.target.value)}
                   autoFocus
                 />
+                {coursePicker === "startTime" && invalidCoursePickerTime ? (
+                  <p className="type-body-r-14 mt-3 text-red-600" role="alert">
+                    시작 시간은 오후 10:59까지 선택해 주세요.
+                  </p>
+                ) : null}
+                {coursePicker === "endTime" && invalidCoursePickerTime ? (
+                  <p className="type-body-r-14 mt-3 text-red-600" role="alert">
+                    종료 시간은 시작 시간보다 최소 1시간 뒤여야 해요.
+                  </p>
+                ) : null}
                 <Button
                   type="button"
                   size="full"
                   className="mt-5"
-                  disabled={!coursePickerValue}
+                  disabled={!coursePickerValue || invalidCoursePickerTime}
                   onClick={() => {
                     if (coursePicker === "date") {
                       updateCourseDraft({ date: coursePickerValue })
                     } else if (coursePicker === "startTime") {
-                      updateCourseDraft({ startTime: coursePickerValue })
+                      updateCourseDraft({
+                        startTime: coursePickerValue,
+                        endTime: isValidCourseTimeRange(
+                          coursePickerValue,
+                          courseDraft.endTime
+                        )
+                          ? courseDraft.endTime
+                          : "",
+                      })
                     } else {
                       updateCourseDraft({ endTime: coursePickerValue })
                     }
