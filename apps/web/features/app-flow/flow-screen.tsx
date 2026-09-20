@@ -1,6 +1,11 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { Button } from "@workspace/ui/components/button"
 import { Chip } from "@workspace/ui/components/chip"
 import { EmptyState } from "@workspace/ui/components/empty-state"
@@ -90,6 +95,8 @@ type Screen =
   | "mypage-edit"
   | "error"
 
+const homePlaceCategories = ["식당", "산책", "카페", "액티비티"] as const
+
 const onboardingCtaClass =
   "px-4 text-[18px] leading-[1.3] tracking-[-0.01em] disabled:bg-gray-150 disabled:text-white"
 
@@ -150,7 +157,10 @@ function FlowScreen({
   const demoMode = useDemoMode()
   const generationStarted = useRef(false)
   const dogHydrated = useRef(false)
+  const homeLocationPromptShown = useRef(false)
   const [hasAccessToken, setHasAccessToken] = useState(false)
+  const [homeLocationResolved, setHomeLocationResolved] = useState(demoMode)
+  const [homeLocationUnavailable, setHomeLocationUnavailable] = useState(false)
   const [authConfigurationError, setAuthConfigurationError] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -220,16 +230,78 @@ function FlowScreen({
   const [homeCategory, setHomeCategory] = useState<
     "전체" | "식당" | "산책" | "카페" | "액티비티"
   >("전체")
+  const shouldLoadHomePlaces =
+    hasAccessToken &&
+    !demoMode &&
+    screen === "home" &&
+    homeLocationResolved &&
+    !homeLocationUnavailable
   const nearbyPlaces = useQuery({
     ...nearbyPlacesQueryOptions({
       lat: coordinates.lat,
       lng: coordinates.lng,
       category: homeCategory === "전체" ? "카페" : homeCategory,
-      radius_m: 2000,
+      radius_m: 10_000,
       limit: 3,
     }),
-    enabled: hasAccessToken && !demoMode && screen === "home",
+    enabled: shouldLoadHomePlaces && homeCategory !== "전체",
   })
+  const allNearbyPlaceQueries = useQueries({
+    queries: homePlaceCategories.map((category) => ({
+      ...nearbyPlacesQueryOptions({
+        lat: coordinates.lat,
+        lng: coordinates.lng,
+        category,
+        radius_m: 10_000,
+        limit: 2,
+      }),
+      enabled: shouldLoadHomePlaces && homeCategory === "전체",
+    })),
+  })
+
+  useEffect(() => {
+    if (screen !== "home" || demoMode || !locationPermissionPromptOpen) return
+    homeLocationPromptShown.current = true
+  }, [demoMode, locationPermissionPromptOpen, screen])
+
+  useEffect(() => {
+    if (
+      screen !== "home" ||
+      demoMode ||
+      !hasAccessToken ||
+      locationPermissionPromptOpen ||
+      homeLocationPromptShown.current ||
+      homeLocationResolved
+    ) {
+      return
+    }
+
+    if (!("geolocation" in navigator)) {
+      setHomeLocationUnavailable(true)
+      setHomeLocationResolved(true)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        updateCoordinates({ lat: coords.latitude, lng: coords.longitude })
+        setHomeLocationUnavailable(false)
+        setHomeLocationResolved(true)
+      },
+      () => {
+        setHomeLocationUnavailable(true)
+        setHomeLocationResolved(true)
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 }
+    )
+  }, [
+    demoMode,
+    hasAccessToken,
+    homeLocationResolved,
+    locationPermissionPromptOpen,
+    screen,
+    updateCoordinates,
+  ])
 
   const serverRecommendations = (nearbyCourses.data ?? []).map((item) =>
     nearbyCourseToFlowCourse(item, user.id)
@@ -240,6 +312,22 @@ function FlowScreen({
   const serverSavedCourses = (savedCourses.data ?? []).map(
     (item) => nearbyCourseToFlowCourse(item, user.id)
   )
+  const homePlaces =
+    homeCategory === "전체"
+      ? dedupeNearbyPlaces(
+          allNearbyPlaceQueries.flatMap((query) => query.data ?? [])
+        ).sort((left, right) => left.dist - right.dist)
+      : (nearbyPlaces.data ?? [])
+  const homePlacesPending =
+    !homeLocationResolved ||
+    (homeCategory === "전체"
+      ? allNearbyPlaceQueries.some((query) => query.isPending)
+      : nearbyPlaces.isPending)
+  const homePlacesError =
+    homeCategory === "전체"
+      ? allNearbyPlaceQueries.every((query) => query.isError)
+      : nearbyPlaces.isError
+  const homeArea = findHomeArea(homePlaces[0]?.address)
   const serverDetailCourse = courseDetail.data
     ? apiCourseToFlowCourse(courseDetail.data, user.id)
     : undefined
@@ -858,7 +946,7 @@ function FlowScreen({
             width={493}
             height={92}
             priority
-            className="pointer-events-none absolute left-[-44px] top-[-12px] h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
+            className="pointer-events-none absolute left-0 top-[50px] h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
           />
           <Image
             src="/logo/home-with-paw.svg"
@@ -866,7 +954,7 @@ function FlowScreen({
             width={124}
             height={30}
             priority
-            className="absolute left-7 top-2 h-[30px] w-[124px]"
+            className="absolute left-7 top-[70px] h-[30px] w-[124px]"
           />
           <Image
             src="/img/home-dog.png"
@@ -874,9 +962,9 @@ function FlowScreen({
             width={206}
             height={260}
             priority
-            className="pointer-events-none absolute left-1/2 top-[46px] h-[260px] w-[206px] -translate-x-1/2 object-cover"
+            className="pointer-events-none absolute left-1/2 top-[108px] h-[260px] w-[206px] -translate-x-1/2 object-cover"
           />
-          <div className="absolute left-5 top-[51px] flex flex-col items-start gap-6">
+          <div className="absolute left-5 top-[137px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
               오늘 <span className="text-red-600">{user.dogName}</span>랑
               <br />
@@ -896,7 +984,7 @@ function FlowScreen({
               <h2 className="type-head-sb-20 text-gray-900">동반 가능시설</h2>
               <span className="flex items-center gap-1 py-1 text-gray-200">
                 <Icon name="location" className="size-4 opacity-[0.41]" />
-                <span className="type-body-r-14">동작구</span>
+                <span className="type-body-r-14">{homeArea}</span>
               </span>
             </div>
             <p className="text-[14px] leading-5 font-medium tracking-[0.5px] text-gray-400">
@@ -929,8 +1017,8 @@ function FlowScreen({
               homePlacePreviews.map((place) => (
                 <HomePlaceCard key={place.id} {...place} />
               ))
-            ) : nearbyPlaces.data?.length ? (
-              nearbyPlaces.data.map((place) => (
+            ) : homePlaces.length ? (
+              homePlaces.slice(0, 2).map((place) => (
                 <HomePlaceCard
                   key={place.content_id}
                   title={place.title}
@@ -938,13 +1026,23 @@ function FlowScreen({
                   distance={`${(place.dist / 1000).toFixed(1)}km`}
                   companionLabel={place.pet_accompany_type ?? "반려견 동반"}
                   pawCount={Math.max(place.like_count, 0)}
-                  imageUrl={place.image_url ?? "/img/home-place.png"}
+                  imageUrl={normalizePlaceImage(place.image_url)}
                 />
               ))
-            ) : nearbyPlaces.isPending ? (
+            ) : homePlacesPending ? (
               <p className="type-body-r-14 text-gray-400">주변 장소를 불러오고 있어요.</p>
+            ) : homeLocationUnavailable ? (
+              <p className="type-body-r-14 text-gray-400">
+                현재 위치를 허용하면 주변 동반 가능시설을 알려드려요.
+              </p>
+            ) : homePlacesError ? (
+              <p className="type-body-r-14 text-gray-400">
+                주변 동반 가능시설을 불러오지 못했어요.
+              </p>
             ) : (
-              <p className="type-body-r-14 text-gray-400">주변 동반 가능시설을 준비하고 있어요.</p>
+              <p className="type-body-r-14 text-gray-400">
+                현재 위치 주변에서 동반 가능시설을 찾지 못했어요.
+              </p>
             )}
           </div>
         </section>
@@ -964,7 +1062,11 @@ function FlowScreen({
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <Button
                   variant="dark"
-                  onClick={dismissLocationPermissionPrompt}
+                  onClick={() => {
+                    setHomeLocationUnavailable(true)
+                    setHomeLocationResolved(true)
+                    dismissLocationPermissionPrompt()
+                  }}
                 >
                   아니요
                 </Button>
@@ -972,6 +1074,8 @@ function FlowScreen({
                   variant="secondary"
                   onClick={() => {
                     if (!("geolocation" in navigator)) {
+                      setHomeLocationUnavailable(true)
+                      setHomeLocationResolved(true)
                       dismissLocationPermissionPrompt()
                       return
                     }
@@ -980,8 +1084,14 @@ function FlowScreen({
                         lat: coords.latitude,
                         lng: coords.longitude,
                       })
+                      setHomeLocationUnavailable(false)
+                      setHomeLocationResolved(true)
                       dismissLocationPermissionPrompt()
-                    }, dismissLocationPermissionPrompt)
+                    }, () => {
+                      setHomeLocationUnavailable(true)
+                      setHomeLocationResolved(true)
+                      dismissLocationPermissionPrompt()
+                    })
                   }}
                 >
                   설정
@@ -1831,6 +1941,20 @@ function FlowScreen({
 
 function Plain({ children }: { children: React.ReactNode }) {
   return <main className="layout-mobile bg-white">{children}</main>
+}
+
+function dedupeNearbyPlaces<T extends { content_id: string }>(places: T[]) {
+  return Array.from(
+    new Map(places.map((place) => [place.content_id, place])).values()
+  )
+}
+
+function findHomeArea(address?: string) {
+  return address?.split(/\s+/).find((part) => part.endsWith("구")) ?? "내 주변"
+}
+
+function normalizePlaceImage(imageUrl: string | null) {
+  return imageUrl?.replace(/^http:/, "https:") ?? "/img/home-place.png"
 }
 
 function HomePlaceCard({
