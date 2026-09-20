@@ -57,6 +57,12 @@ export function KakaoCallbackScreen({ code }: { code?: string }) {
 
           router.replace("/login?error=invalid-response")
         },
+        onError: () => {
+          // A failed exchange never consumes the browser-side guard. Without
+          // this cleanup, a remount of the callback route incorrectly reports
+          // kakao-code-used instead of the actual API error.
+          window.sessionStorage.removeItem(exchangeKey)
+        },
       }
     )
   }, [code, login, router, updateUser])
