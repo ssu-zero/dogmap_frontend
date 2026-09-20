@@ -154,6 +154,7 @@ function FlowScreen({
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [onboardingNameFocused, setOnboardingNameFocused] = useState(false)
+  const [birthYearMenuOpen, setBirthYearMenuOpen] = useState(false)
   const registerDog = useMutation(registerDogMutationOptions())
   const createApiCourse = useMutation(createCourseMutationOptions())
   const replaceCoursePlaces = useMutation(replaceCoursePlacesMutationOptions())
@@ -532,7 +533,7 @@ function FlowScreen({
                   </>
                 : "반려견 반가워요!\n반려견을 소개해주세요"}
             </h1>
-            <div className="-mx-1 mt-7">
+            <div className="-mx-1 mt-7 w-full">
               <fieldset>
                 <legend className="type-body-sb-16 px-1 text-gray-800">
                   크기
@@ -552,7 +553,11 @@ function FlowScreen({
                         onboarding.dogSize === size ? "selected" : "default"
                       }
                       description={description}
-                      descriptionClassName="text-[14px] leading-[1.5] font-normal tracking-[-0.01em] text-gray-200"
+                      descriptionClassName={`text-[14px] leading-[1.5] font-normal tracking-[-0.01em] ${
+                        onboarding.dogSize === size
+                          ? "text-gray-300"
+                          : "text-gray-200"
+                      }`}
                       className={`h-16 min-h-0 min-w-0 w-full ${
                         onboarding.dogSize && onboarding.dogSize !== size
                           ? "opacity-40"
@@ -565,37 +570,71 @@ function FlowScreen({
                   ))}
                 </div>
               </fieldset>
-              <label className="mt-7 block space-y-3 px-1">
-                <span className="type-body-sb-16 text-gray-900">출생연도</span>
-                <span className="relative block">
-                  <select
-                    aria-label="출생 연도"
-                    className={`type-body-sb-16 h-12 w-full appearance-none rounded-xl bg-gray-50 px-6 pr-12 focus:outline-none ${
-                      onboarding.birthYear ? "text-gray-800" : "text-gray-150"
+              <div className="mt-7 flex flex-col gap-3">
+                <p
+                  id="birth-year-label"
+                  className="type-body-sb-16 px-1 text-gray-900"
+                >
+                  출생연도
+                </p>
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-labelledby="birth-year-label"
+                    aria-haspopup="listbox"
+                    aria-expanded={birthYearMenuOpen}
+                    aria-controls="birth-year-options"
+                    onClick={() => setBirthYearMenuOpen((open) => !open)}
+                    className={`type-body-sb-16 flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-6 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 ${
+                      onboarding.birthYear ? "text-gray-900" : "text-gray-150"
                     }`}
-                    value={onboarding.birthYear}
-                    onChange={(event) =>
-                      updateOnboarding({ birthYear: event.target.value })
-                    }
                   >
-                    <option value="" disabled>
-                      출생 연도를 선택해주세요
-                    </option>
-                    {birthYears.map((year) => (
-                      <option key={year} value={year}>
-                        {year}년
-                      </option>
-                    ))}
-                  </select>
-                  <Image
-                    src="/icons/onboarding/arrow-down.svg"
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="pointer-events-none absolute right-6 top-1/2 size-6 -translate-y-1/2"
-                  />
-                </span>
-              </label>
+                    <span>
+                      {onboarding.birthYear
+                        ? `${onboarding.birthYear}년`
+                        : "출생연도를 선택해주세요"}
+                    </span>
+                    <Image
+                      src="/icons/onboarding/arrow-down.svg"
+                      alt=""
+                      width={24}
+                      height={24}
+                      className={`size-6 transition-transform ${
+                        birthYearMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {birthYearMenuOpen ? (
+                    <div
+                      id="birth-year-options"
+                      role="listbox"
+                      aria-labelledby="birth-year-label"
+                      className="absolute z-20 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-100 bg-white p-1 shadow-[0_8px_20px_rgba(21,21,21,0.12)]"
+                    >
+                      {birthYears.map((year) => {
+                        const selected = onboarding.birthYear === year
+                        return (
+                          <button
+                            key={year}
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            className={`type-body-sb-16 flex h-11 w-full items-center rounded-lg px-5 text-left transition-colors hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none ${
+                              selected ? "bg-gray-50 text-gray-900" : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              updateOnboarding({ birthYear: year })
+                              setBirthYearMenuOpen(false)
+                            }}
+                          >
+                            {year}년
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
             <div className="mt-auto pt-8">
               <div className="flex flex-col gap-1 rounded-xl bg-gray-50 px-5 py-3">
