@@ -964,7 +964,7 @@ function FlowScreen({
             width={206}
             height={260}
             priority
-            className="pointer-events-none absolute left-[187px] top-[46px] h-[260px] w-[206px] object-cover"
+            className="pointer-events-none absolute right-0 top-[46px] h-[260px] w-[206px] object-contain object-right"
           />
           <div className="absolute left-5 top-[75px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
