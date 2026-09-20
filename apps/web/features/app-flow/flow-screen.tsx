@@ -406,7 +406,16 @@ function FlowScreen({
     return (
       <Plain>
         <section className="flex min-h-[inherit] flex-col bg-white pt-[var(--figma-safe-area-top)]">
-          <header className="h-[60px] shrink-0" aria-label="반려견 소개" />
+          <header className="flex h-[60px] shrink-0 items-center px-4 py-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="뒤로 가기"
+              className="flex size-6 items-center justify-center"
+            >
+              <Icon name="arrowLeft" className="size-6" />
+            </button>
+          </header>
           <div className="flex min-h-0 flex-1 flex-col px-5">
             <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
               {"함께 여행할 친구를\n소개해주세요!"}
@@ -427,7 +436,13 @@ function FlowScreen({
                 }`}
               >
                 <span className="sr-only">반려견 사진 추가</span>
-                <Icon name="plus" className="size-8" />
+                <Image
+                  src="/icons/onboarding/plus.svg"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="size-8"
+                />
                 <input
                   className="sr-only"
                   type="file"
@@ -466,13 +481,14 @@ function FlowScreen({
               onChange={(event) =>
                 updateOnboarding({ dogName: event.target.value })
               }
-              placeholder="반려견 이름"
+              placeholder="이름을 입력해주세요"
               className="mt-8 h-14 text-center"
             />
             <div className="mt-auto pb-6 pt-8">
               <Button
                 size="full"
                 variant="dark"
+                className="text-[18px] leading-[1.3] tracking-[-0.01em]"
                 disabled={!nameValid}
                 onClick={() => router.push("/onboarding/2")}
               >
