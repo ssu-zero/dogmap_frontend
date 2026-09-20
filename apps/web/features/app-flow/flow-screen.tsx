@@ -25,7 +25,12 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
-import { getAccessToken, getSignupToken, setAccessToken } from "@/api/client"
+import {
+  clearAccessToken,
+  getAccessToken,
+  getSignupToken,
+  setAccessToken,
+} from "@/api/client"
 import { getMyDogImageUploadUrl } from "@/api/dog"
 import {
   courseDetailQueryOptions,
@@ -233,6 +238,9 @@ function FlowScreen({
   const [draftDiaries, setDraftDiaries] = useState<Record<string, string>>({})
   const [communityFilter, setCommunityFilter] = useState<
     "전체" | "소형" | "중형" | "대형"
+  >("전체")
+  const [courseListFilter, setCourseListFilter] = useState<
+    "전체" | "내 코스" | "저장한 코스"
   >("전체")
   const [homeCategory, setHomeCategory] = useState<
     "전체" | "식당" | "산책" | "카페" | "액티비티"
@@ -1121,22 +1129,50 @@ function FlowScreen({
   if (screen === "courses")
     return (
       <AppShell tab="course">
-        <Header title="내 코스" />
-        <section className="flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-6">
-          {displayedCourses.length === 0 ? (
+        <Header title="코스" />
+        <section className="relative flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-24 pt-2">
+          <div className="flex gap-2 py-2" role="tablist" aria-label="코스 목록">
+            {(["전체", "내 코스", "저장한 코스"] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                role="tab"
+                aria-selected={courseListFilter === filter}
+                className={`type-body-r-16 rounded-full px-3 py-1 ${courseListFilter === filter ? "bg-gray-900 text-gray-50" : "bg-gray-100 text-gray-200"}`}
+                onClick={() => setCourseListFilter(filter)}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+          {displayedCourses.filter((item) =>
+            courseListFilter === "전체"
+              ? true
+              : courseListFilter === "내 코스"
+                ? item.userId === user.id
+                : Boolean(item.saved && item.userId !== user.id)
+          ).length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-8">
               <EmptyState
-                title="아직 만든 코스가 없어요"
+                title={
+                  courseListFilter === "저장한 코스"
+                    ? "저장한 코스가 없어요"
+                    : "아직 만든 코스가 없어요"
+                }
                 description="제로와 떠날 첫 여행 코스를 지금 만들어보세요"
               />
-              <Button size="full" onClick={() => router.push("/courses/new")}>
-                첫 코스 만들기
-              </Button>
             </div>
           ) : (
-            <>
-              <div className="space-y-3 py-5">
-                {displayedCourses.map((item) => (
+            <div className="space-y-4 py-3">
+                {displayedCourses
+                  .filter((item) =>
+                    courseListFilter === "전체"
+                      ? true
+                      : courseListFilter === "내 코스"
+                        ? item.userId === user.id
+                        : Boolean(item.saved && item.userId !== user.id)
+                  )
+                  .map((item) => (
                   <button
                     className="w-full text-left"
                     key={item.id}
@@ -1148,13 +1184,17 @@ function FlowScreen({
                       spots={item.places.length}
                     />
                   </button>
-                ))}
-              </div>
-              <Button size="full" onClick={() => router.push("/courses/new")}>
-                새 코스 만들기
-              </Button>
-            </>
+                  ))}
+            </div>
           )}
+          <Button
+            size="fab"
+            className="absolute right-5 bottom-4 bg-gray-600 text-gray-50 hover:bg-gray-600"
+            onClick={() => router.push("/courses/new")}
+          >
+            <Icon name="plus" className="size-5 invert" />
+            코스 만들기
+          </Button>
         </section>
       </AppShell>
     )
@@ -1164,26 +1204,24 @@ function FlowScreen({
       <Plain>
         <Header title="코스 만들기" onBack={() => router.back()} />
         <form
-          className="space-y-6 px-5 py-6"
+          className="flex min-h-[calc(100svh-3.75rem)] flex-col space-y-5 bg-gray-50 px-5 pb-6 pt-3"
           onSubmit={(event) => {
             event.preventDefault()
             if (!isCourseDraftComplete(courseDraft)) return
             router.push("/courses/generating")
           }}
         >
-          <div className="rounded-2xl bg-gray-100 px-5 py-5">
-            <p className="type-body-sb-16">
-              {user.dogName} · {user.age} 기준으로 짜드려요
-            </p>
-            <p className="type-body-r-14 mt-1 text-gray-400">
-              여행할 날짜와 출발 정보를 알려주세요.
+          <div className="px-7 pb-1">
+            <p className="type-body-r-14 text-gray-400">
+              {user.dogName}의 체형과 나이를 고려한 코스로 생성돼요!
             </p>
           </div>
-          <label className="block space-y-2">
-            <span className="type-body-sb-16">날짜*</span>
+          <label className="flex min-h-14 items-center justify-between rounded-xl bg-gray-100/50 px-5 py-3">
+            <span className="type-head-sb-18 text-gray-600">날짜</span>
             <TextField
               aria-label="날짜"
               type="date"
+              className="h-9 w-40 border-0 bg-transparent p-0 text-right shadow-none"
               state={courseDraft.date ? "completed" : "writing"}
               value={courseDraft.date}
               onChange={(event) =>
@@ -1191,12 +1229,15 @@ function FlowScreen({
               }
             />
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block space-y-2">
-              <span className="type-body-sb-16">시작 시간*</span>
+          <fieldset className="space-y-3 rounded-xl bg-gray-100/50 px-5 pb-4 pt-1">
+            <legend className="type-head-sb-18 w-full border-b border-gray-150 py-3 text-gray-600">시간</legend>
+            <div className="space-y-2">
+            <label className="flex items-center justify-between">
+              <span className="type-body-sb-14 text-gray-400">시작 시간</span>
               <TextField
                 aria-label="시작 시간"
                 type="time"
+                className="h-10 w-25 border-0 bg-gray-50 px-2 text-center shadow-[0_0_2px_var(--color-gray-100)]"
                 state={courseDraft.startTime ? "completed" : "writing"}
                 value={courseDraft.startTime}
                 onChange={(event) =>
@@ -1204,11 +1245,12 @@ function FlowScreen({
                 }
               />
             </label>
-            <label className="block space-y-2">
-              <span className="type-body-sb-16">종료 시간*</span>
+            <label className="flex items-center justify-between">
+              <span className="type-body-sb-14 text-gray-400">종료 시간</span>
               <TextField
                 aria-label="종료 시간"
                 type="time"
+                className="h-10 w-25 border-0 bg-gray-50 px-2 text-center shadow-[0_0_2px_var(--color-gray-100)]"
                 state={courseDraft.endTime ? "completed" : "writing"}
                 value={courseDraft.endTime}
                 onChange={(event) =>
@@ -1216,11 +1258,13 @@ function FlowScreen({
                 }
               />
             </label>
-          </div>
-          <label className="block space-y-2">
-            <span className="type-body-sb-16">출발 위치*</span>
+            </div>
+          </fieldset>
+          <label className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-gray-100/50 px-5 py-3">
+            <span className="type-head-sb-18 shrink-0 text-gray-600">출발 위치</span>
             <TextField
               aria-label="출발 위치"
+              className="h-9 flex-1 border-0 bg-transparent p-0 text-right shadow-none"
               state={courseDraft.startLocation ? "completed" : "writing"}
               value={courseDraft.startLocation}
               onChange={(event) =>
@@ -1229,10 +1273,11 @@ function FlowScreen({
               placeholder="현재 위치 · 익산역"
             />
           </label>
-          <label className="block space-y-2">
-            <span className="type-body-sb-16">코스 이름*</span>
+          <label className="block space-y-2 px-3">
+            <span className="type-head-sb-18 text-gray-600">코스 이름</span>
             <TextField
               aria-label="코스 이름"
+              className="h-10 border-x-0 border-t-0 border-b border-gray-150 bg-transparent px-0 shadow-none"
               state={courseDraft.title ? "completed" : "writing"}
               value={courseDraft.title}
               maxLength={30}
@@ -1242,8 +1287,8 @@ function FlowScreen({
               placeholder="코스 이름"
             />
           </label>
-          <fieldset className="space-y-3">
-            <legend className="type-body-sb-16">산책 시간*</legend>
+          <fieldset className="space-y-3 px-3">
+            <legend className="type-head-sb-18 text-gray-600">산책 시간</legend>
             <div className="grid grid-cols-3 gap-2">
               {courseDurations.map((duration) => (
                 <ChoiceButton
@@ -1260,9 +1305,9 @@ function FlowScreen({
               ))}
             </div>
           </fieldset>
-          <fieldset className="space-y-3">
-            <legend className="type-body-sb-16">어떤 곳을 들를까요?*</legend>
-            <div className="grid grid-cols-3 gap-2">
+          <fieldset className="space-y-3 px-3">
+            <legend className="type-head-sb-18 text-gray-600">들르고 싶은 곳을 골라주세요!</legend>
+            <div className="flex flex-wrap gap-2">
               {courseThemes.map((theme) => {
                 const selected = courseDraft.themes.includes(theme)
                 return (
@@ -1275,13 +1320,7 @@ function FlowScreen({
                         themes: toggleCourseTheme(courseDraft.themes, theme),
                       })
                     }
-                    description={
-                      theme === "산책"
-                        ? "가볍게"
-                        : theme === "카페"
-                          ? "여유롭게"
-                          : "신나게"
-                    }
+                    className="h-8 rounded-full px-3"
                   >
                     {theme}
                   </ChoiceButton>
@@ -1289,12 +1328,13 @@ function FlowScreen({
               })}
             </div>
           </fieldset>
-          <p className="type-caption-r-12 text-gray-400">
+          <p className="type-caption-r-12 px-3 text-gray-400">
             필수 조건과 원하는 코스를 모두 선택하면 추천을 시작할 수 있어요.
           </p>
           <Button
             size="full"
             type="submit"
+            className="mt-auto"
             disabled={!isCourseDraftComplete(courseDraft)}
           >
             코스 생성하기
@@ -1962,39 +2002,64 @@ function FlowScreen({
   if (screen === "mypage")
     return (
       <AppShell tab="mypage">
-        <Header title="마이페이지" />
-        <section className="space-y-6 px-5 py-6">
-          <div className="flex items-center gap-4">
+        <section className="space-y-5 bg-gray-50 px-5 pb-6 pt-12">
+          <div className="flex flex-col items-center">
             <Image
               src={profileImageSrc}
               alt={`${user.dogName} 프로필`}
-              width={80}
-              height={80}
+              width={132}
+              height={132}
               unoptimized={profileImageSrc.startsWith("http")}
-              className="size-20 rounded-full object-cover"
+              className="size-[132px] rounded-full object-cover"
             />
-            <div className="min-w-0 flex-1">
+            <div className="mt-3 flex items-center gap-2">
               <h1 className="type-head-sb-20">{user.dogName}</h1>
-              <p className="type-body-r-14 text-gray-400">
-                {user.age} · {activeDogSizeLabel}
-              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="h-7 rounded-full px-3"
+                onClick={() => router.push("/mypage/edit")}
+              >
+                수정
+              </Button>
             </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => router.push("/mypage/edit")}
-            >
-              수정
-            </Button>
           </div>
-          <div className="space-y-2">
-            <p className="type-caption-r-12 text-gray-400">
-              보호자 {user.name}
-            </p>
-            <ListRow
-              label="약관 보기"
-              onClick={() => router.push("/terms/service")}
-            />
+          <dl className="grid grid-cols-3 rounded-2xl border border-gray-800 bg-gray-500 px-5 py-3 text-center">
+            <div className="space-y-1">
+              <dt className="type-body-sb-14 text-gray-50">몸무게</dt>
+              <dd className="type-body-r-16 text-gray-200">10kg 이하</dd>
+            </div>
+            <div className="space-y-1 border-x border-gray-600">
+              <dt className="type-body-sb-14 text-gray-50">나이</dt>
+              <dd className="type-body-r-16 text-gray-200">{user.age}</dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="type-body-sb-14 text-gray-50">견종</dt>
+              <dd className="type-body-r-16 text-gray-200">{activeDogSizeLabel}</dd>
+            </div>
+          </dl>
+          <div className="space-y-3">
+            <section className="rounded-xl bg-white px-5 py-3">
+              <h2 className="type-body-sb-16 border-b border-gray-100 py-2">설정</h2>
+              <ListRow label="이용약관" onClick={() => router.push("/terms/service")} />
+              <ListRow label="개인정보 처리방침" onClick={() => router.push("/terms/privacy")} />
+            </section>
+            <section className="rounded-xl bg-white px-5 py-3">
+              <h2 className="type-body-sb-16 border-b border-gray-100 py-2">계정관리</h2>
+              <ListRow
+                label="로그아웃"
+                onClick={() => {
+                  clearAccessToken()
+                  router.replace("/login")
+                }}
+              />
+              <ListRow label="탈퇴" onClick={() => router.push("/error-demo")} />
+            </section>
+          </div>
+          <p className="type-caption-r-12 px-1 text-gray-400">
+            보호자 {user.name}
+          </p>
+          <div className="sr-only">
             <ListRow
               label="오류 화면 보기"
               onClick={() => router.push("/error-demo")}
