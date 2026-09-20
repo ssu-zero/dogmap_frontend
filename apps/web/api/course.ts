@@ -35,6 +35,24 @@ export function getCourse(courseId: string) {
   return parseResponse(apiClient.get(`api/courses/${courseId}`), courseSchema)
 }
 
+export function updateCourseTitle(courseId: string, title: string) {
+  return parseResponse(
+    apiClient.patch(`api/courses/${courseId}`, { json: { title } }),
+    courseSchema
+  )
+}
+
+export function deleteCourse(courseId: string) {
+  return apiClient.delete(`api/courses/${courseId}`).then(() => undefined)
+}
+
+export function shareCourse(courseId: string) {
+  return parseResponse(
+    apiClient.post(`api/courses/${courseId}/share`),
+    courseSchema
+  )
+}
+
 export function getMyCourses() {
   return parseResponse(apiClient.get("api/dogs/me/courses"), myCoursesSchema)
 }

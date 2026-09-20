@@ -301,51 +301,58 @@ function TimelineSpot({
       </div>
       <div className="min-w-0 flex-1 space-y-2 pb-3">
         <p className="type-body-sb-13 text-gray-400">{time}</p>
-        <div
-          className={cn(
-            "flex min-h-14 items-center gap-3 rounded-[20px] border px-5 py-3",
-            surface,
-            empty && "flex-col items-start"
-          )}
-        >
-          {empty ? (
-            <>
-              <Chip variant={dark ? "red" : "softRed"}>{chip}</Chip>
-              <p className="type-body-r-13 text-gray-400">
-                뛰지 않고 쉬어가면서 걷는게 좋아요!
-              </p>
-            </>
-          ) : (
-            <div className="min-w-0 flex-1">
-              <p className="type-body-sb-16 truncate">{title}</p>
-              <div className="mt-2 flex items-center gap-3">
-                <Chip variant={dark ? "dark" : "softRed"}>{chip}</Chip>
-                <span
-                  className={cn(
-                    "type-body-r-13",
-                    dark ? "text-gray-400" : "text-gray-500"
-                  )}
-                >
-                  첫 방문
-                </span>
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              "flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-[20px] border px-5 py-3",
+              surface,
+              empty && "flex-col items-start"
+            )}
+          >
+            {empty ? (
+              <>
+                <Chip variant={dark ? "red" : "softRed"}>{chip}</Chip>
+                <p className="type-body-r-13 text-gray-400">
+                  뛰지 않고 쉬어가면서 걷는게 좋아요!
+                </p>
+              </>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <p className="type-body-sb-16 truncate">{title}</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <Chip
+                    variant={course ? "red" : dark ? "dark" : "softRed"}
+                    className={edit ? "bg-gray-700 text-red-700" : undefined}
+                  >
+                    {chip}
+                  </Chip>
+                  <span
+                    className={cn(
+                      "type-body-r-13",
+                      dark ? "text-gray-400" : "text-gray-500"
+                    )}
+                  >
+                    {dark ? "내가 방문한 적이 있어요!" : "첫 방문"}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+            {!edit && !empty ? (
+              <Icon
+                name="arrowRight"
+                className={cn("size-6", dark && "opacity-50 invert")}
+              />
+            ) : null}
+          </div>
           {edit ? (
             <button
               type="button"
               aria-label="스팟 제거"
-              className="flex size-11 items-center justify-center rounded-lg border border-gray-50 bg-gray-700"
+              className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-gray-50 bg-gray-700"
               onClick={onRemove}
             >
-              <Icon name="close" className="size-6" />
+              <Icon name="close" className="size-6 invert" />
             </button>
-          ) : null}
-          {!edit && !empty ? (
-            <Icon
-              name="arrowRight"
-              className={cn("size-6", dark && "invert opacity-50")}
-            />
           ) : null}
         </div>
         {dark && !empty && review ? (

@@ -6,6 +6,7 @@ export type Course = {
   places: string[]
   placeDetails?: { category: string; visitTime?: string | null }[]
   saved?: boolean
+  shared?: boolean
   edge?: boolean
   date?: string
   startTime?: string

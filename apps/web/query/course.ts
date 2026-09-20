@@ -2,13 +2,16 @@ import { mutationOptions, queryOptions } from "@tanstack/react-query"
 
 import {
   createCourse,
+  deleteCourse,
   getCourse,
   getMyCourses,
   getNearbyCourses,
   getSavedCourses,
   replaceCoursePlaces,
   saveCourse,
+  shareCourse,
   unsaveCourse,
+  updateCourseTitle,
 } from "@/api/course"
 import type { NearbyCoursesParams } from "@/schema/course"
 
@@ -36,6 +39,25 @@ export const courseDetailQueryOptions = (courseId: string) =>
   queryOptions({
     queryKey: courseQueryKeys.detail(courseId),
     queryFn: () => getCourse(courseId),
+  })
+
+export const updateCourseTitleMutationOptions = () =>
+  mutationOptions({
+    mutationKey: ["courses", "update-title"],
+    mutationFn: ({ courseId, title }: { courseId: string; title: string }) =>
+      updateCourseTitle(courseId, title),
+  })
+
+export const deleteCourseMutationOptions = () =>
+  mutationOptions({
+    mutationKey: ["courses", "delete"],
+    mutationFn: deleteCourse,
+  })
+
+export const shareCourseMutationOptions = () =>
+  mutationOptions({
+    mutationKey: ["courses", "share"],
+    mutationFn: shareCourse,
   })
 
 export const myCoursesQueryOptions = () =>

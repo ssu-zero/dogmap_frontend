@@ -34,6 +34,8 @@ type AppFlowState = {
   updateUser: (updates: Partial<typeof currentUser>) => void
   createCourse: (draft: CourseDraft) => Course
   addCourse: (course: Course) => void
+  updateCourse: (courseId: string, updates: Partial<Course>) => void
+  removeCourse: (courseId: string) => void
   saveCourse: (course: Course) => void
   setTerm: (term: RequiredTermKey, value: boolean) => void
   setAllTerms: (value: boolean) => void
@@ -111,6 +113,16 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
           course,
           ...previous.filter((item) => item.id !== course.id),
         ]),
+      updateCourse: (courseId, updates) =>
+        setCourses((previous) =>
+          previous.map((course) =>
+            course.id === courseId ? { ...course, ...updates } : course
+          )
+        ),
+      removeCourse: (courseId) =>
+        setCourses((previous) =>
+          previous.filter((course) => course.id !== courseId)
+        ),
       saveCourse: (course) =>
         setCourses((previous) =>
           previous.some((item) => item.id === course.id)

@@ -18,6 +18,7 @@ const iconSources = {
   close: new URL("../svg/close.svg", import.meta.url).href,
   currentLocation: new URL("../svg/current_location.svg", import.meta.url).href,
   edit: new URL("../svg/edit.svg", import.meta.url).href,
+  editRed: new URL("../svg/edit_red.svg", import.meta.url).href,
   homeFill: new URL("../svg/home_fill.svg", import.meta.url).href,
   homeLine: new URL("../svg/home_line.svg", import.meta.url).href,
   location: new URL("../svg/location.svg", import.meta.url).href,

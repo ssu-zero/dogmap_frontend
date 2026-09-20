@@ -104,6 +104,7 @@ export function apiCourseToFlowCourse(
         }).format(walkDate)
       : undefined,
     saved: course.is_saved,
+    shared: course.is_shared,
     path: course.path,
     startCoordinates: { lat: course.start_lat, lng: course.start_lng },
   }
@@ -124,4 +125,54 @@ export function nearbyCourseToFlowCourse(
     placeCount: course.place_count,
     saved: course.is_saved,
   }
+}
+
+/** The places API trusts the client to rebuild the route after a stop is removed. */
+export function courseAfterRemovingSpots(
+  course: ApiCourse,
+  removedIndexes: number[]
+) {
+  const remaining = course.places.filter(
+    (_, index) => !removedIndexes.includes(index)
+  )
+  const path: [number, number][] = [
+    [course.start_lat, course.start_lng],
+    ...remaining.map((place): [number, number] => [place.lat, place.lng]),
+  ]
+  const places = remaining.map((place, index) => {
+    const [fromLat, fromLng] = path[index] ?? [
+      course.start_lat,
+      course.start_lng,
+    ]
+    const distanceMeters = Math.round(
+      straightLineMeters(fromLat, fromLng, place.lat, place.lng)
+    )
+
+    return {
+      ...place,
+      sequence: index + 1,
+      travel_distance_meters: distanceMeters,
+      travel_minutes: Math.ceil(distanceMeters / 75),
+      visit_time: null,
+    }
+  })
+
+  return { places, path }
+}
+
+function straightLineMeters(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number
+) {
+  const radians = Math.PI / 180
+  const latitudeDelta = (toLat - fromLat) * radians
+  const longitudeDelta = (toLng - fromLng) * radians
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(fromLat * radians) *
+      Math.cos(toLat * radians) *
+      Math.sin(longitudeDelta / 2) ** 2
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(a))
 }

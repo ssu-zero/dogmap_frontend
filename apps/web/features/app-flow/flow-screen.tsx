@@ -36,11 +36,14 @@ import {
   courseDetailQueryOptions,
   createCourseMutationOptions,
   courseQueryKeys,
+  deleteCourseMutationOptions,
   myCoursesQueryOptions,
   nearbyCoursesQueryOptions,
   replaceCoursePlacesMutationOptions,
   savedCoursesQueryOptions,
   saveCourseMutationOptions,
+  shareCourseMutationOptions,
+  updateCourseTitleMutationOptions,
 } from "@/query/course"
 import {
   updateWalkLogMutationOptions,
@@ -58,6 +61,7 @@ import {
 import { getKakaoAuthorizeUrl, useDemoMode } from "../auth/kakao"
 import {
   apiCourseToFlowCourse,
+  courseAfterRemovingSpots,
   courseDraftToApiRequest,
   nearbyCourseToFlowCourse,
   onboardingToDogCreate,
@@ -153,6 +157,8 @@ function FlowScreen({
     courses,
     createCourse: createDemoCourse,
     addCourse,
+    updateCourse: updateDemoCourse,
+    removeCourse: removeDemoCourse,
     coordinates,
     courseStartCoordinates,
     courseDraft,
@@ -197,6 +203,9 @@ function FlowScreen({
   const registerDog = useMutation(registerDogMutationOptions())
   const createApiCourse = useMutation(createCourseMutationOptions())
   const replaceCoursePlaces = useMutation(replaceCoursePlacesMutationOptions())
+  const updateCourseTitle = useMutation(updateCourseTitleMutationOptions())
+  const deleteApiCourse = useMutation(deleteCourseMutationOptions())
+  const shareApiCourse = useMutation(shareCourseMutationOptions())
   const saveApiCourse = useMutation(saveCourseMutationOptions())
   const updateWalkLog = useMutation(updateWalkLogMutationOptions())
   const updateDog = useMutation(updateMyDogMutationOptions())
@@ -247,11 +256,20 @@ function FlowScreen({
   const [listOpen, setListOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null)
   const [courseEditing, setCourseEditing] = useState(false)
-  const [pendingSpotRemoval, setPendingSpotRemoval] = useState<string | null>(null)
-  const [removedSpotToast, setRemovedSpotToast] = useState(false)
-  const [removedCourseSpots, setRemovedCourseSpots] = useState<
-    Record<string, string[]>
-  >({})
+  const [courseMenuOpen, setCourseMenuOpen] = useState(false)
+  const [pendingCourseDeletion, setPendingCourseDeletion] = useState(false)
+  const [pendingSpotRemoval, setPendingSpotRemoval] = useState<number | null>(
+    null
+  )
+  const [removedCourseSpotIndexes, setRemovedCourseSpotIndexes] = useState<
+    number[]
+  >([])
+  const [courseTitleDraft, setCourseTitleDraft] = useState("")
+  const [editingCourseTitle, setEditingCourseTitle] = useState(false)
+  const [courseActionError, setCourseActionError] = useState<string | null>(
+    null
+  )
+  const [courseToast, setCourseToast] = useState<string | null>(null)
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
@@ -572,10 +590,10 @@ function FlowScreen({
   ])
 
   useEffect(() => {
-    if (!removedSpotToast) return
-    const timeout = window.setTimeout(() => setRemovedSpotToast(false), 2_000)
+    if (!courseToast) return
+    const timeout = window.setTimeout(() => setCourseToast(null), 2_000)
     return () => window.clearTimeout(timeout)
-  }, [removedSpotToast])
+  }, [courseToast])
 
   if (screen === "login") {
     return (
@@ -1648,9 +1666,9 @@ function FlowScreen({
     )
 
   if (screen === "course-detail" && ownCourse && course) {
-    const visiblePlaces = course.places.filter(
-      (place) => !removedCourseSpots[course.id]?.includes(place)
-    )
+    const visiblePlaces = course.places
+      .map((place, index) => ({ place, index }))
+      .filter(({ index }) => !removedCourseSpotIndexes.includes(index))
     const dateLabel = course.date
       ? new Intl.DateTimeFormat("ko-KR", {
           month: "2-digit",
@@ -1659,14 +1677,112 @@ function FlowScreen({
         }).format(new Date(`${course.date}T00:00:00`))
       : "오늘의 추천 코스"
 
+    const courseActionBusy =
+      updateCourseTitle.isPending ||
+      replaceCoursePlaces.isPending ||
+      deleteApiCourse.isPending ||
+      shareApiCourse.isPending
+
     const removeSpot = () => {
-      if (!pendingSpotRemoval) return
-      setRemovedCourseSpots((previous) => ({
+      if (pendingSpotRemoval === null) return
+      setRemovedCourseSpotIndexes((previous) => [
         ...previous,
-        [course.id]: [...(previous[course.id] ?? []), pendingSpotRemoval],
-      }))
+        pendingSpotRemoval,
+      ])
       setPendingSpotRemoval(null)
-      setRemovedSpotToast(true)
+      setCourseToast("스팟이 삭제되었습니다")
+    }
+
+    const saveCourseChanges = async () => {
+      const title = courseTitleDraft.trim()
+      if (!title) {
+        setCourseActionError("코스 제목을 입력해 주세요.")
+        return
+      }
+      setCourseActionError(null)
+      try {
+        if (demoMode) {
+          updateDemoCourse(course.id, {
+            title,
+            places: visiblePlaces.map(({ place }) => place),
+            placeDetails: visiblePlaces.map(
+              ({ index }) => course.placeDetails?.[index] ?? { category: "ETC" }
+            ),
+          })
+        } else {
+          let updated = courseDetail.data
+          if (!updated || String(updated.course_id) !== course.id) {
+            throw new Error("코스 정보를 불러온 뒤 다시 시도해 주세요.")
+          }
+          if (title !== updated.title) {
+            updated = await updateCourseTitle.mutateAsync({
+              courseId: course.id,
+              title,
+            })
+            queryClient.setQueryData(courseQueryKeys.detail(course.id), updated)
+          }
+          if (removedCourseSpotIndexes.length) {
+            updated = await replaceCoursePlaces.mutateAsync({
+              courseId: course.id,
+              ...courseAfterRemovingSpots(updated, removedCourseSpotIndexes),
+            })
+            queryClient.setQueryData(courseQueryKeys.detail(course.id), updated)
+          }
+          addCourse(apiCourseToFlowCourse(updated, user.id))
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
+        }
+        setRemovedCourseSpotIndexes([])
+        setEditingCourseTitle(false)
+        setCourseEditing(false)
+        setCourseToast("코스가 수정되었습니다")
+      } catch (error) {
+        setCourseActionError(
+          error instanceof Error ? error.message : "코스를 수정하지 못했습니다."
+        )
+      }
+    }
+
+    const deleteCourse = async () => {
+      setCourseActionError(null)
+      try {
+        if (!demoMode) {
+          await deleteApiCourse.mutateAsync(course.id)
+          queryClient.removeQueries({ queryKey: courseQueryKeys.detail(course.id) })
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
+          void queryClient.invalidateQueries({
+            queryKey: ["courses", "nearby"],
+          })
+        }
+        removeDemoCourse(course.id)
+        setPendingCourseDeletion(false)
+        router.replace("/courses")
+      } catch (error) {
+        setCourseActionError(
+          error instanceof Error ? error.message : "코스를 삭제하지 못했습니다."
+        )
+      }
+    }
+
+    const shareCourse = async () => {
+      setCourseMenuOpen(false)
+      setCourseActionError(null)
+      try {
+        if (demoMode) {
+          updateDemoCourse(course.id, { shared: true })
+        } else {
+          const updated = await shareApiCourse.mutateAsync(course.id)
+          queryClient.setQueryData(courseQueryKeys.detail(course.id), updated)
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
+          void queryClient.invalidateQueries({
+            queryKey: ["courses", "nearby"],
+          })
+        }
+        setCourseToast("코스가 공유되었습니다")
+      } catch (error) {
+        setCourseActionError(
+          error instanceof Error ? error.message : "코스를 공유하지 못했습니다."
+        )
+      }
     }
 
     if (!courseEditing) {
@@ -1706,20 +1822,78 @@ function FlowScreen({
                   </div>
                   <p className="type-body-r-14 text-gray-500">{dateLabel}</p>
                 </div>
-                <Button
-                  aria-label="코스 수정"
-                  variant="text"
-                  size="sm"
-                  className="size-6 p-0 text-gray-50 hover:bg-transparent"
-                  onClick={() => setCourseEditing(true)}
-                >
-                  <Icon name="more" className="size-6 invert" />
-                </Button>
+                <div className="relative shrink-0">
+                  <Button
+                    aria-label="코스 메뉴"
+                    aria-expanded={courseMenuOpen}
+                    aria-haspopup="menu"
+                    variant="text"
+                    size="sm"
+                    className="size-6 p-0 text-gray-50 hover:bg-transparent"
+                    onClick={() => setCourseMenuOpen((open) => !open)}
+                  >
+                    <Icon name="more" className="size-6 invert" />
+                  </Button>
+                  {courseMenuOpen ? (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="코스 메뉴 닫기"
+                        className="fixed inset-0 z-20 cursor-default"
+                        onClick={() => setCourseMenuOpen(false)}
+                      />
+                      <div
+                        role="menu"
+                        aria-label="코스 관리"
+                        className="absolute top-8 right-0 z-30 flex w-28 flex-col gap-1 rounded-lg bg-gray-500 p-1 shadow-[0_2px_12px_rgba(0,0,0,0.3)]"
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="type-body-r-14 rounded px-2 py-2 text-center text-gray-50 hover:bg-gray-600"
+                          onClick={() => {
+                            setCourseMenuOpen(false)
+                            setCourseTitleDraft(course.title)
+                            setRemovedCourseSpotIndexes([])
+                            setCourseActionError(null)
+                            setCourseEditing(true)
+                          }}
+                        >
+                          코스 수정하기
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="type-body-r-14 rounded px-2 py-2 text-center text-gray-50 hover:bg-gray-600"
+                          onClick={() => {
+                            setCourseMenuOpen(false)
+                            setPendingCourseDeletion(true)
+                          }}
+                        >
+                          코스 삭제하기
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="type-body-r-14 rounded px-2 py-2 text-center text-gray-50 hover:bg-gray-600"
+                          onClick={() => void shareCourse()}
+                        >
+                          코스 공유하기
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
               </div>
+              {courseActionError ? (
+                <p className="type-body-r-14 text-red-500" role="alert">
+                  {courseActionError}
+                </p>
+              ) : null}
               <section aria-label="코스 스팟" className="space-y-0">
-                {visiblePlaces.map((place, index) => (
+                {visiblePlaces.map(({ place, index }) => (
                   <TimelineSpot
-                    key={`${course.id}-${place}`}
+                    key={`${course.id}-${index}`}
                     title={place}
                     time={
                       course.placeDetails?.[index]?.visitTime
@@ -1764,6 +1938,58 @@ function FlowScreen({
                 </section>
               ) : null}
             </section>
+            {courseToast ? (
+              <p
+                className="type-body-r-16 absolute right-5 bottom-6 left-5 mx-auto w-fit rounded-full bg-gray-600 px-4 py-2 text-gray-50"
+                role="status"
+              >
+                {courseToast}
+              </p>
+            ) : null}
+            {pendingCourseDeletion ? (
+              <div
+                className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 px-5"
+                role="dialog"
+                aria-modal="true"
+                aria-label="코스 삭제 확인"
+              >
+                <section className="w-full rounded-2xl bg-gray-800 p-4 text-center">
+                  <h2 className="type-head-sb-24 text-gray-50">
+                    코스를 삭제할까요?
+                  </h2>
+                  <p className="type-body-r-16 mt-2 text-gray-400">
+                    삭제한 코스는 다시 되돌릴 수 없어요.
+                  </p>
+                  {courseActionError ? (
+                    <p
+                      className="type-body-r-14 mt-3 text-red-500"
+                      role="alert"
+                    >
+                      {courseActionError}
+                    </p>
+                  ) : null}
+                  <div className="mt-6 grid grid-cols-2 gap-2">
+                    <Button
+                      size="lg"
+                      variant="dark"
+                      className="h-13 w-full bg-gray-600 px-4 hover:bg-gray-600"
+                      disabled={courseActionBusy}
+                      onClick={() => setPendingCourseDeletion(false)}
+                    >
+                      유지하기
+                    </Button>
+                    <Button
+                      size="lg"
+                      className="h-13 w-full bg-red-500 px-4 hover:bg-red-500"
+                      disabled={courseActionBusy}
+                      onClick={() => void deleteCourse()}
+                    >
+                      삭제하기
+                    </Button>
+                  </div>
+                </section>
+              </div>
+            ) : null}
           </section>
         </Plain>
       )
@@ -1775,42 +2001,77 @@ function FlowScreen({
           <Header
             className="shrink-0 bg-gray-900 text-gray-50 [&_img]:invert"
             title={undefined}
-            onBack={() => router.back()}
+            onBack={() => {
+              setCourseEditing(false)
+              setEditingCourseTitle(false)
+              setRemovedCourseSpotIndexes([])
+              setCourseActionError(null)
+            }}
           />
           <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-6 pb-28">
             <div className="space-y-1">
               <div className="flex items-center gap-4">
-                <h1 className="type-head-sb-24 py-1 text-gray-50">
-                  {course.title}
-                </h1>
+                {editingCourseTitle ? (
+                  <input
+                    aria-label="코스 제목"
+                    type="text"
+                    autoFocus
+                    maxLength={80}
+                    value={courseTitleDraft}
+                    onChange={(event) =>
+                      setCourseTitleDraft(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur()
+                        setEditingCourseTitle(false)
+                      }
+                    }}
+                    className="type-head-sb-24 min-w-0 flex-1 border-0 border-b border-red-600 bg-gray-800 px-3 py-1 text-gray-50 outline-none focus:border-red-600 focus:outline-none"
+                  />
+                ) : (
+                  <h1 className="type-head-sb-24 min-w-0 py-1 text-gray-50">
+                    {courseTitleDraft || course.title}
+                  </h1>
+                )}
                 <Button
-                  aria-label="코스 수정"
+                  aria-label="코스 제목 수정"
                   variant="text"
                   size="sm"
-                  className="size-6 p-0 text-gray-50 hover:bg-transparent"
-                  onClick={() => setCourseEditing((value) => !value)}
+                  className="size-6 shrink-0 p-0 hover:bg-transparent"
+                  onClick={() => setEditingCourseTitle(true)}
                 >
-                  <Icon name="edit" className="size-6 invert" />
+                  <Icon name="editRed" className="size-6" />
                 </Button>
               </div>
               <p className="type-body-r-14 text-gray-500">{dateLabel}</p>
+              {courseActionError ? (
+                <p className="type-body-r-14 text-red-500" role="alert">
+                  {courseActionError}
+                </p>
+              ) : null}
             </div>
 
             {visiblePlaces.length ? (
               <section aria-label="코스 스팟" className="space-y-0">
-                {visiblePlaces.map((place, index) => (
+                {visiblePlaces.map(({ place, index }) => (
                   <TimelineSpot
-                    key={`${course.id}-${place}`}
+                    key={`${course.id}-${index}`}
                     title={place}
-                    time={formatCourseSpotTime(course.startTime, index)}
-                    chip={index % 2 ? "카페" : "식당"}
-                    variant={courseEditing ? "dark-edit" : "dark-default"}
-                    review={courseEditing ? undefined : "내가 방문한 적이 있어요!"}
-                    onRemove={
-                      courseEditing
-                        ? () => setPendingSpotRemoval(place)
-                        : undefined
+                    time={
+                      course.placeDetails?.[index]?.visitTime
+                        ? formatVisitTime(course.placeDetails[index].visitTime)
+                        : formatCourseSpotTime(course.startTime, index)
                     }
+                    chip={
+                      course.placeDetails?.[index]
+                        ? formatPlaceCategory(
+                            course.placeDetails[index].category
+                          )
+                        : "장소"
+                    }
+                    variant="dark-edit"
+                    onRemove={() => setPendingSpotRemoval(index)}
                   />
                 ))}
               </section>
@@ -1826,27 +2087,28 @@ function FlowScreen({
             )}
           </main>
 
-          <div className="absolute inset-x-0 bottom-0 bg-gray-900 px-5 pb-6 pt-3">
+          <div className="absolute inset-x-0 bottom-0 bg-gray-900 px-5 pt-3 pb-6">
             <Button
               size="full"
               variant="secondary"
               className="border-0 bg-gray-50 text-gray-900 hover:bg-white"
-              onClick={() => setCourseEditing((value) => !value)}
+              disabled={courseActionBusy || !courseTitleDraft.trim()}
+              onClick={() => void saveCourseChanges()}
             >
-              {courseEditing ? "수정 완료" : "수정하기"}
+              수정하기
             </Button>
           </div>
 
-          {removedSpotToast ? (
+          {courseToast ? (
             <p
               className="type-body-r-16 absolute inset-x-0 bottom-24 mx-auto w-fit rounded-full bg-gray-600 px-4 py-2 text-gray-50"
               role="status"
             >
-              스팟이 삭제되었습니다
+              {courseToast}
             </p>
           ) : null}
 
-          {pendingSpotRemoval ? (
+          {pendingSpotRemoval !== null ? (
             <div
               className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 px-5"
               role="dialog"
@@ -1866,12 +2128,27 @@ function FlowScreen({
                   <div className="rounded-[20px] border border-gray-400 bg-gray-600 px-5 py-3 text-left">
                     <div className="flex items-center gap-2">
                       <p className="type-body-sb-16 text-gray-150">
-                        {pendingSpotRemoval}
+                        {course.places[pendingSpotRemoval]}
                       </p>
-                      <Chip variant="dark">스팟</Chip>
+                      <Chip variant="dark">
+                        {course.placeDetails?.[pendingSpotRemoval]
+                          ? formatPlaceCategory(
+                              course.placeDetails[pendingSpotRemoval].category
+                            )
+                          : "장소"}
+                      </Chip>
                     </div>
                     <p className="type-body-r-13 mt-2 text-gray-400">
-                      현재 코스에서 방문 예정
+                      {formatCourseSpotTime(
+                        course.startTime,
+                        pendingSpotRemoval
+                      )}
+                      {" ~ "}
+                      {formatCourseSpotTime(
+                        course.startTime,
+                        pendingSpotRemoval + 1
+                      )}
+                      {" 방문 예정"}
                     </p>
                   </div>
                 </div>
@@ -1921,7 +2198,9 @@ function FlowScreen({
           <section className="relative -mt-28 min-h-[calc(100svh-14rem)] rounded-t-2xl bg-gray-50 px-5 py-6">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-3">
-                <h1 className="type-head-sb-24 text-gray-800">{course.title}</h1>
+                <h1 className="type-head-sb-24 text-gray-800">
+                  {course.title}
+                </h1>
                 <div className="type-body-r-14 flex items-center gap-2 text-gray-500">
                   <span className="rounded-full bg-red-600 px-2 py-1 text-red-50">
                     + 11
