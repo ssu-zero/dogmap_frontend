@@ -4,6 +4,7 @@
 
 1. Figma Harness defines routes, states, ownership branches and user actions.
 2. Figma UI defines the visual treatment for each corresponding screen.
+3. Figma status bars, Dynamic Island, and browser toolbars are reference-device chrome only. They must never become a fixed top spacer in the web app: every app page starts at its own actual content/header at `y=0`.
 3. Existing project tokens and reusable UI components define implementation conventions.
 
 ## Runtime boundary
