@@ -17,7 +17,6 @@ import {
   ListRow,
   TimelineSpot,
 } from "@workspace/ui/components/list"
-import { Loading, LoadingSteps } from "@workspace/ui/components/loading"
 import { ChoiceButton, LikeButton } from "@workspace/ui/components/selection"
 import { TextField } from "@workspace/ui/components/text-field"
 import Image from "next/image"
@@ -26,6 +25,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
 import {
+  ApiError,
   clearAccessToken,
   getAccessToken,
   getSignupToken,
@@ -65,6 +65,11 @@ import {
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
+import {
+  CourseGenerationScreen,
+  GENERATION_MINIMUM_DURATION_MS,
+  GENERATION_STEP_DURATION_MS,
+} from "./course-generation-screen"
 import {
   fallbackCoordinates,
   KakaoCourseMap,
@@ -170,6 +175,12 @@ function FlowScreen({
   const queryClient = useQueryClient()
   const demoMode = useDemoMode()
   const generationStarted = useRef(false)
+  const [generationAttempt, setGenerationAttempt] = useState(0)
+  const [generationStep, setGenerationStep] = useState(0)
+  const [generationMinimumElapsed, setGenerationMinimumElapsed] =
+    useState(false)
+  const [generatedCourse, setGeneratedCourse] = useState<Course | null>(null)
+  const [generationRevealing, setGenerationRevealing] = useState(false)
   const dogHydrated = useRef(false)
   const homeLocationPromptShown = useRef(false)
   const [hasAccessToken, setHasAccessToken] = useState(false)
@@ -177,6 +188,7 @@ function FlowScreen({
   const [homeLocationUnavailable, setHomeLocationUnavailable] = useState(false)
   const [authConfigurationError, setAuthConfigurationError] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const [generationNoCandidates, setGenerationNoCandidates] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [onboardingNameFocused, setOnboardingNameFocused] = useState(false)
   const [birthYearMenuOpen, setBirthYearMenuOpen] = useState(false)
@@ -403,12 +415,15 @@ function FlowScreen({
     demoMode
   )
   const ownCourse = course?.userId === user.id
-  const generationDisplayError =
-    generationError ??
-    createApiCourse.error?.message ??
-    (screen === "generating" && !demoMode && !hasAccessToken
-      ? "코스를 만들려면 카카오 로그인이 필요합니다."
-      : null)
+  const generationRequiresLogin =
+    screen === "generating" && !demoMode && !hasAccessToken
+  const generationDisplayError = generationRequiresLogin
+    ? "코스를 만들려면 카카오 로그인이 필요합니다."
+    : generationMinimumElapsed
+      ? generationNoCandidates
+        ? `${courseDraft.startLocation.trim() || "현재 위치"}에 적절한 코스가 없습니다.`
+        : generationError
+      : null
   const activeDogSize = myDog.data?.size ?? dogSize
   const activeDogSizeLabel =
     activeDogSize === "SMALL"
@@ -442,18 +457,33 @@ function FlowScreen({
   }, [myDog.data, updateUser])
 
   useEffect(() => {
+    if (screen !== "generating") return
+
+    const timers = [1, 2, 3].map((nextStep) =>
+      window.setTimeout(
+        () => setGenerationStep(nextStep),
+        nextStep * GENERATION_STEP_DURATION_MS
+      )
+    )
+    timers.push(
+      window.setTimeout(
+        () => setGenerationMinimumElapsed(true),
+        GENERATION_MINIMUM_DURATION_MS
+      )
+    )
+
+    return () => timers.forEach(window.clearTimeout)
+  }, [generationAttempt, screen])
+
+  useEffect(() => {
     if (screen !== "generating" || generationStarted.current) return
     generationStarted.current = true
 
     if (demoMode) {
-      const timeout = window.setTimeout(() => {
-        const generated = createDemoCourse(courseDraft)
-        router.replace(`/courses/${generated.id}`)
-      }, 1200)
-      return () => {
-        window.clearTimeout(timeout)
-        generationStarted.current = false
-      }
+      void Promise.resolve().then(() =>
+        setGeneratedCourse(createDemoCourse(courseDraft))
+      )
+      return
     }
 
     if (!getAccessToken()) {
@@ -477,9 +507,14 @@ function FlowScreen({
         const generated = apiCourseToFlowCourse(finalized, user.id)
         addCourse(generated)
         queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
-        router.replace(`/courses/${generated.id}`)
+        setGeneratedCourse(generated)
       })
       .catch((error: Error) => {
+        setGenerationNoCandidates(
+          error instanceof ApiError &&
+            error.status === 502 &&
+            error.message.includes("최종 확정할 장소 후보가 없습니다.")
+        )
         setGenerationError(error.message)
       })
   }, [
@@ -490,10 +525,41 @@ function FlowScreen({
     createApiCourse,
     createDemoCourse,
     demoMode,
+    generationAttempt,
+    queryClient,
     replaceCoursePlaces,
-    router,
     screen,
     user.id,
+  ])
+
+  useEffect(() => {
+    if (
+      screen !== "generating" ||
+      !generationMinimumElapsed ||
+      !generatedCourse ||
+      generationError
+    ) {
+      return
+    }
+
+    const revealTimeout = window.setTimeout(
+      () => setGenerationRevealing(true),
+      0
+    )
+    const timeout = window.setTimeout(
+      () => router.replace(`/courses/${generatedCourse.id}`),
+      650
+    )
+    return () => {
+      window.clearTimeout(revealTimeout)
+      window.clearTimeout(timeout)
+    }
+  }, [
+    generatedCourse,
+    generationError,
+    generationMinimumElapsed,
+    router,
+    screen,
   ])
 
   useEffect(() => {
@@ -505,9 +571,11 @@ function FlowScreen({
   if (screen === "login") {
     return (
       <Plain>
-        <section className="relative flex min-h-[inherit] flex-col bg-red-600 px-5 pb-6 pt-40">
+        <section className="relative flex min-h-[inherit] flex-col bg-red-600 px-5 pt-40 pb-6">
           <div className="flex flex-col items-center text-center">
-            <p className="type-body-r-16 text-gray-50">반려동물 맞춤 산책코스</p>
+            <p className="type-body-r-16 text-gray-50">
+              반려동물 맞춤 산책코스
+            </p>
             <Image
               src="/logo/login-main.svg"
               alt="개동여지도"
@@ -1511,43 +1579,30 @@ function FlowScreen({
 
   if (screen === "generating")
     return (
-      <Plain>
-        <section className="flex min-h-[inherit] flex-col justify-center gap-8 px-8">
-          <LoadingSteps steps={["past", "current", "upcoming"]} />
-          <div>
-            <h1 className="type-head-sb-24">
-              제로에게 딱 맞는
-              <br />
-              코스를 만들고 있어요
-            </h1>
-            <p className="type-body-r-14 mt-2 text-gray-400">
-              잠시만 기다려 주세요.
-            </p>
-          </div>
-          {generationDisplayError ? (
-            <div className="space-y-3" role="alert">
-              <p className="type-body-r-14 text-red-600">
-                {generationDisplayError}
-              </p>
-              <Button
-                size="full"
-                onClick={() => {
-                  if (!demoMode && !getAccessToken()) {
-                    router.replace("/login")
-                    return
-                  }
-                  generationStarted.current = false
-                  setGenerationError(null)
-                }}
-              >
-                {!demoMode && !hasAccessToken ? "로그인하기" : "다시 시도"}
-              </Button>
-            </div>
-          ) : (
-            <Loading state="ing" />
-          )}
-        </section>
-      </Plain>
+      <CourseGenerationScreen
+        dogName={user.dogName || "반려견"}
+        step={generationStep}
+        error={generationDisplayError}
+        requiresLogin={generationRequiresLogin}
+        noCandidates={generationNoCandidates}
+        revealing={generationRevealing}
+        completedCourse={generatedCourse}
+        onChangeLocation={() => router.replace("/courses/new")}
+        onRetry={() => {
+          if (!demoMode && !getAccessToken()) {
+            router.replace("/login")
+            return
+          }
+          generationStarted.current = false
+          setGenerationError(null)
+          setGenerationNoCandidates(false)
+          setGenerationStep(0)
+          setGenerationMinimumElapsed(false)
+          setGeneratedCourse(null)
+          setGenerationRevealing(false)
+          setGenerationAttempt((attempt) => attempt + 1)
+        }}
+      />
     )
 
   if (screen === "course-detail" && ownCourse && course) {
@@ -1556,9 +1611,9 @@ function FlowScreen({
     )
     const dateLabel = course.date
       ? new Intl.DateTimeFormat("ko-KR", {
-          month: "long",
-          day: "numeric",
-          weekday: "short",
+          month: "2-digit",
+          day: "2-digit",
+          weekday: "long",
         }).format(new Date(`${course.date}T00:00:00`))
       : "오늘의 추천 코스"
 
@@ -1583,26 +1638,26 @@ function FlowScreen({
                 path={course.path}
                 places={course.places}
                 onSelectPlace={setSelectedPlace}
+                dark
+              />
+              <Image
+                src="/img/dog_small.png"
+                alt=""
+                width={88}
+                height={71}
+                className="pointer-events-none absolute top-[167px] left-[10px] h-[71px] w-[88px]"
               />
               <Header
                 className="absolute inset-x-0 top-0 bg-gradient-to-b from-gray-900/70 to-transparent [&_img]:invert"
                 title={undefined}
-                onBack={() => router.back()}
+                onBack={() => router.push("/courses")}
               />
-              <Button
-                variant="dark"
-                size="sm"
-                className="absolute right-5 bottom-5 bg-gray-500 px-3 text-gray-50 hover:bg-gray-500"
-                onClick={() => setCourseEditing(true)}
-              >
-                코스 수정하기
-              </Button>
             </div>
             <section className="relative -mt-28 min-h-[calc(100svh-14rem)] space-y-5 rounded-t-2xl bg-gray-900 px-5 py-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <h1 className="type-head-sb-24 text-gray-50">
+                    <h1 className="type-head-sb-22 text-gray-50">
                       {course.title}
                     </h1>
                     <Chip variant="dark">예정</Chip>
@@ -1624,10 +1679,19 @@ function FlowScreen({
                   <TimelineSpot
                     key={`${course.id}-${place}`}
                     title={place}
-                    time={formatCourseSpotTime(course.startTime, index)}
-                    chip={index % 2 ? "카페" : "식당"}
+                    time={
+                      course.placeDetails?.[index]?.visitTime
+                        ? formatVisitTime(course.placeDetails[index].visitTime)
+                        : formatCourseSpotTime(course.startTime, index)
+                    }
+                    chip={
+                      course.placeDetails?.[index]
+                        ? formatPlaceCategory(
+                            course.placeDetails[index].category
+                          )
+                        : "장소"
+                    }
                     variant="dark-course"
-                    review="제로와 함께 방문했던 곳이에요."
                   />
                 ))}
               </section>
@@ -1671,7 +1735,7 @@ function FlowScreen({
             title={undefined}
             onBack={() => router.back()}
           />
-          <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-28 pt-6">
+          <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pt-6 pb-28">
             <div className="space-y-1">
               <div className="flex items-center gap-4">
                 <h1 className="type-head-sb-24 py-1 text-gray-50">
@@ -2549,15 +2613,37 @@ function getCourseTimeParts(time: string) {
 }
 
 function formatCourseSpotTime(startTime: string | undefined, index: number) {
-  const [rawHour, rawMinute] = (startTime ?? "10:00")
-    .split(":")
-    .map(Number)
-  const totalMinutes = (rawHour * 60 || 600) + (rawMinute || 0) + index * 60
+  const [rawHour, rawMinute] = (startTime ?? "10:00").split(":").map(Number)
+  const totalMinutes = (rawHour ?? 10) * 60 + (rawMinute ?? 0) + index * 60
   const hour = Math.floor(totalMinutes / 60) % 24
   const minute = totalMinutes % 60
   const period = hour < 12 ? "오전" : "오후"
   const displayHour = hour % 12 || 12
   return `${period} ${displayHour} : ${String(minute).padStart(2, "0")}`
+}
+
+function formatVisitTime(visitTime: string) {
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(new Date(visitTime))
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? ""
+  return `${value("dayPeriod")} ${value("hour")} : ${value("minute")}`
+}
+
+function formatPlaceCategory(category: string) {
+  const labels: Record<string, string> = {
+    PARK: "산책",
+    CAFE: "카페",
+    RESTAURANT: "식당",
+    HOSPITAL: "동물병원",
+    PET_SHOP: "반려동물 용품",
+    ETC: "장소",
+  }
+  return labels[category] ?? "장소"
 }
 
 function normalizePlaceImage(imageUrl: string | null) {

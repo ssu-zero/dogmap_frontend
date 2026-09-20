@@ -4,6 +4,7 @@ export type Course = {
   title: string
   duration: number
   places: string[]
+  placeDetails?: { category: string; visitTime?: string | null }[]
   saved?: boolean
   edge?: boolean
   date?: string

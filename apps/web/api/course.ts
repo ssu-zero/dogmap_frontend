@@ -26,6 +26,7 @@ export async function createCourse(input: CourseCreateRequest) {
   return parseResponse(
     apiClient.post("api/courses", {
       json: courseCreateRequestSchema.parse(input),
+      timeout: 120_000,
     }),
     courseSchema
   )

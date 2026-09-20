@@ -76,12 +76,33 @@ export function apiCourseToFlowCourse(
   course: ApiCourse,
   userId: string
 ): Course {
+  const walkDate = course.walk_date ? new Date(course.walk_date) : null
   return {
     id: String(course.course_id),
     userId: course.is_owner ? userId : "other",
     title: course.title,
     duration: Math.round(course.total_duration_minutes),
     places: course.places.map((place) => place.name),
+    placeDetails: course.places.map((place) => ({
+      category: place.category,
+      visitTime: place.visit_time,
+    })),
+    date: walkDate
+      ? new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "Asia/Seoul",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(walkDate)
+      : undefined,
+    startTime: walkDate
+      ? new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Seoul",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(walkDate)
+      : undefined,
     saved: course.is_saved,
     path: course.path,
     startCoordinates: { lat: course.start_lat, lng: course.start_lng },

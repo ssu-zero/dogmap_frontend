@@ -13,6 +13,7 @@ type KakaoMapProps = {
   places: string[]
   onSelectPlace: (place: string) => void
   className?: string
+  dark?: boolean
 }
 
 type KakaoMapInstance = {
@@ -173,15 +174,34 @@ function useKakaoMaps(appKey: string | undefined) {
   }
 }
 
-function MapLoadError({ onRetry }: { onRetry: () => void }) {
+function MapLoadError({
+  onRetry,
+  dark = false,
+}: {
+  onRetry: () => void
+  dark?: boolean
+}) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-100 px-5 text-center">
-      <p className="type-body-r-14 text-gray-500">
+    <div
+      className={cn(
+        "absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center",
+        dark ? "bg-gray-900" : "bg-gray-100"
+      )}
+    >
+      <p
+        className={cn(
+          "type-body-r-14",
+          dark ? "text-gray-400" : "text-gray-500"
+        )}
+      >
         지도를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
       </p>
       <button
         type="button"
-        className="type-body-sb-14 rounded-lg bg-white px-4 py-2 text-gray-600 shadow-sm"
+        className={cn(
+          "type-body-sb-14 rounded-lg px-4 py-2 shadow-sm",
+          dark ? "bg-gray-700 text-gray-50" : "bg-white text-gray-600"
+        )}
         onClick={onRetry}
       >
         다시 시도
@@ -220,6 +240,7 @@ export function KakaoCourseMap({
   places,
   onSelectPlace,
   className,
+  dark = false,
 }: KakaoMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const onSelectPlaceRef = useRef(onSelectPlace)
@@ -278,8 +299,19 @@ export function KakaoCourseMap({
 
   if (!appKey) {
     return (
-      <section className={cn("flex h-84 items-center justify-center bg-gray-100 px-5 text-center", className)}>
-        <p className="type-body-r-14 text-gray-500">
+      <section
+        className={cn(
+          "flex h-84 items-center justify-center px-5 text-center",
+          dark ? "bg-gray-900" : "bg-gray-100",
+          className
+        )}
+      >
+        <p
+          className={cn(
+            "type-body-r-14",
+            dark ? "text-gray-400" : "text-gray-500"
+          )}
+        >
           카카오맵 키를 확인한 뒤 실제 지도를 표시할 수 있어요.
         </p>
       </section>
@@ -287,12 +319,27 @@ export function KakaoCourseMap({
   }
 
   return (
-    <section className={cn("relative h-84 overflow-hidden bg-gray-100", className)} aria-label="코스 지도">
-      <div ref={containerRef} className="size-full" />
-      {loadError ? <MapLoadError onRetry={retry} /> : null}
+    <section
+      className={cn(
+        "relative h-84 overflow-hidden",
+        dark ? "bg-gray-900" : "bg-gray-100",
+        className
+      )}
+      aria-label="코스 지도"
+    >
+      <div
+        ref={containerRef}
+        className={cn("size-full", dark && "brightness-50 saturate-50")}
+      />
+      {loadError ? <MapLoadError onRetry={retry} dark={dark} /> : null}
       {!maps && !loadError ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-100/80">
-          <p className="type-body-r-14 text-gray-500">지도를 불러오는 중이에요.</p>
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 flex items-center justify-center",
+            dark ? "bg-gray-900 text-gray-400" : "bg-gray-100/80 text-gray-500"
+          )}
+        >
+          <p className="type-body-r-14">지도를 불러오는 중이에요.</p>
         </div>
       ) : null}
     </section>
@@ -512,7 +559,10 @@ export function KakaoLocationPicker({
         {results.length > 0 ? (
           <ul className="mt-2 max-h-64 overflow-y-auto rounded-xl bg-white py-1 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
             {results.map((place) => (
-              <li key={place.id} className="border-b border-gray-100 last:border-b-0">
+              <li
+                key={place.id}
+                className="border-b border-gray-100 last:border-b-0"
+              >
                 <button
                   type="button"
                   className="w-full px-4 py-3 text-left"
@@ -563,13 +613,16 @@ export function KakaoLocationPicker({
       ) : null}
       {!loadError && maps ? (
         <p className="type-body-r-14 pointer-events-none absolute right-3 bottom-3 left-3 rounded-lg bg-white/95 px-4 py-3 text-center text-gray-600 shadow-sm">
-          {selectedLabel || "지도에서 출발 위치를 누르거나 장소를 검색해 주세요."}
+          {selectedLabel ||
+            "지도에서 출발 위치를 누르거나 장소를 검색해 주세요."}
         </p>
       ) : null}
       {loadError ? <MapLoadError onRetry={retry} /> : null}
       {!maps && !loadError ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-100/80">
-          <p className="type-body-r-14 text-gray-500">지도를 불러오는 중이에요.</p>
+          <p className="type-body-r-14 text-gray-500">
+            지도를 불러오는 중이에요.
+          </p>
         </div>
       ) : null}
     </section>
