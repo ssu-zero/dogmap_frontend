@@ -159,7 +159,10 @@ export function KakaoCourseMap({
         id="kakao-map-sdk"
         src={`https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`}
         strategy="afterInteractive"
-        onLoad={() => setSdkReady(true)}
+        onReady={() => {
+          if (window.kakao?.maps) setSdkReady(true)
+          else setLoadError(true)
+        }}
         onError={() => setLoadError(true)}
       />
       <div ref={containerRef} className="size-full" />
@@ -252,7 +255,10 @@ export function KakaoLocationPicker({
         id="kakao-location-picker-sdk"
         src={`https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`}
         strategy="afterInteractive"
-        onLoad={() => setSdkReady(true)}
+        onReady={() => {
+          if (window.kakao?.maps) setSdkReady(true)
+          else setLoadError(true)
+        }}
         onError={() => setLoadError(true)}
       />
       <div ref={containerRef} className="size-full" />
