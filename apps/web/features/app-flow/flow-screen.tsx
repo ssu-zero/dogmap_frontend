@@ -241,7 +241,7 @@ function FlowScreen({
     "전체" | "소형" | "중형" | "대형"
   >("전체")
   const [courseListFilter, setCourseListFilter] = useState<
-    "전체" | "내 코스" | "저장한 코스"
+    "전체" | "내가 만든" | "내가 저장한"
   >("전체")
   const [homeCategory, setHomeCategory] = useState<
     "전체" | "식당" | "산책" | "카페" | "액티비티"
@@ -1133,30 +1133,46 @@ function FlowScreen({
         <Header title="코스" />
         <section className="relative flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-24 pt-2">
           <div className="flex gap-2 py-2" role="tablist" aria-label="코스 목록">
-            {(["전체", "내 코스", "저장한 코스"] as const).map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                role="tab"
-                aria-selected={courseListFilter === filter}
-                className={`type-body-r-16 rounded-full px-3 py-1 ${courseListFilter === filter ? "bg-gray-900 text-gray-50" : "bg-gray-100 text-gray-200"}`}
-                onClick={() => setCourseListFilter(filter)}
-              >
-                {filter}
-              </button>
-            ))}
+            {(["전체", "내가 만든", "내가 저장한"] as const).map((filter) => {
+              const active = courseListFilter === filter
+              const iconName =
+                filter === "내가 만든"
+                  ? "pawFill"
+                  : filter === "내가 저장한"
+                    ? "bookmarkFill"
+                    : null
+
+              return (
+                <button
+                  key={filter}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`type-body-r-16 inline-flex items-center gap-1 rounded-full px-3 py-1 ${active ? "bg-gray-900 text-gray-50" : "bg-gray-100 text-gray-200"}`}
+                  onClick={() => setCourseListFilter(filter)}
+                >
+                  {iconName ? (
+                    <Icon
+                      name={iconName}
+                      className={`size-5 ${active ? "invert" : "opacity-[0.41]"}`}
+                    />
+                  ) : null}
+                  {filter}
+                </button>
+              )
+            })}
           </div>
           {displayedCourses.filter((item) =>
             courseListFilter === "전체"
               ? true
-              : courseListFilter === "내 코스"
+              : courseListFilter === "내가 만든"
                 ? item.userId === user.id
                 : Boolean(item.saved && item.userId !== user.id)
           ).length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-8">
               <EmptyState
                 title={
-                  courseListFilter === "저장한 코스"
+                  courseListFilter === "내가 저장한"
                     ? "저장한 코스가 없어요"
                     : "아직 만든 코스가 없어요"
                 }
@@ -1169,7 +1185,7 @@ function FlowScreen({
                   .filter((item) =>
                     courseListFilter === "전체"
                       ? true
-                      : courseListFilter === "내 코스"
+                      : courseListFilter === "내가 만든"
                         ? item.userId === user.id
                         : Boolean(item.saved && item.userId !== user.id)
                   )
