@@ -100,6 +100,8 @@ type Screen =
   | "mypage-edit"
   | "error"
 
+type CoursePickerField = "date" | "startTime" | "endTime"
+
 const homePlaceCategories = ["식당", "산책", "카페", "액티비티"] as const
 
 const onboardingCtaClass =
@@ -242,6 +244,10 @@ function FlowScreen({
   const [courseListFilter, setCourseListFilter] = useState<
     "전체" | "내가 만든" | "내가 저장한"
   >("전체")
+  const [coursePicker, setCoursePicker] = useState<CoursePickerField | null>(
+    null
+  )
+  const [coursePickerValue, setCoursePickerValue] = useState("")
   const [homeCategory, setHomeCategory] = useState<
     "전체" | "식당" | "산책" | "카페" | "액티비티"
   >("전체")
@@ -1244,22 +1250,21 @@ function FlowScreen({
             </p>
           </div>
           <div className="mt-5 space-y-5 px-5">
-            <label className="relative flex h-18 items-center justify-between rounded-xl bg-gray-100/40 px-5 py-4">
+            <button
+              type="button"
+              className="flex h-18 w-full items-center justify-between rounded-xl bg-gray-100/40 px-5 py-4 text-left"
+              onClick={() => {
+                setCoursePicker("date")
+                setCoursePickerValue(
+                  courseDraft.date || new Date().toISOString().slice(0, 10)
+                )
+              }}
+            >
               <span className="type-head-sb-18 text-gray-600">날짜</span>
               <span className="type-body-sb-16 text-gray-400">
                 {formatCourseDate(courseDraft.date)}
               </span>
-              <TextField
-                aria-label="날짜"
-                type="date"
-                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                state="completed"
-                value={courseDraft.date}
-                onChange={(event) =>
-                  updateCourseDraft({ date: event.target.value })
-                }
-              />
-            </label>
+            </button>
 
             <fieldset className="space-y-3 rounded-xl bg-gray-100/40 px-5 pb-4 pt-1">
               <legend className="type-head-sb-18 w-full border-b border-gray-150 py-3 text-gray-600">
@@ -1272,29 +1277,26 @@ function FlowScreen({
                     ["종료 시간", "endTime"],
                   ] as const
                 ).map(([label, field]) => (
-                  <label
+                  <div
                     key={field}
                     className="flex items-center justify-between"
                   >
                     <span className="type-body-sb-14 text-gray-400">
                       {label}
                     </span>
-                    <span className="relative inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)]">
+                    <button
+                      type="button"
+                      className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)]"
+                      onClick={() => {
+                        setCoursePicker(field)
+                        setCoursePickerValue(courseDraft[field] || "13:00")
+                      }}
+                    >
                       <span className="type-body-r-14 text-gray-600">
                         {formatCourseTime(courseDraft[field])}
                       </span>
-                      <TextField
-                        aria-label={label}
-                        type="time"
-                        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                        state="completed"
-                        value={courseDraft[field]}
-                        onChange={(event) =>
-                          updateCourseDraft({ [field]: event.target.value })
-                        }
-                      />
-                    </span>
-                  </label>
+                    </button>
+                  </div>
                 ))}
               </div>
             </fieldset>
@@ -1366,6 +1368,63 @@ function FlowScreen({
               만들기
             </Button>
           </div>
+
+          {coursePicker ? (
+            <div
+              className="absolute inset-0 z-50 flex items-end bg-black/40"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="course-picker-title"
+            >
+              <button
+                type="button"
+                className="absolute inset-0 cursor-default"
+                aria-label="선택창 닫기"
+                onClick={() => setCoursePicker(null)}
+              />
+              <section className="relative w-full rounded-t-3xl bg-white px-5 pt-6 pb-8 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 id="course-picker-title" className="type-head-sb-20">
+                    {coursePicker === "date" ? "날짜 선택" : "시간 선택"}
+                  </h2>
+                  <button
+                    type="button"
+                    className="type-body-r-14 px-2 text-gray-400"
+                    onClick={() => setCoursePicker(null)}
+                  >
+                    취소
+                  </button>
+                </div>
+                <TextField
+                  aria-label={coursePicker === "date" ? "날짜 선택" : "시간 선택"}
+                  type={coursePicker === "date" ? "date" : "time"}
+                  className="h-14 rounded-xl border-gray-150 px-5 text-center"
+                  state="completed"
+                  value={coursePickerValue}
+                  onChange={(event) => setCoursePickerValue(event.target.value)}
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  size="full"
+                  className="mt-5"
+                  disabled={!coursePickerValue}
+                  onClick={() => {
+                    if (coursePicker === "date") {
+                      updateCourseDraft({ date: coursePickerValue })
+                    } else if (coursePicker === "startTime") {
+                      updateCourseDraft({ startTime: coursePickerValue })
+                    } else {
+                      updateCourseDraft({ endTime: coursePickerValue })
+                    }
+                    setCoursePicker(null)
+                  }}
+                >
+                  확인
+                </Button>
+              </section>
+            </div>
+          ) : null}
         </form>
       </Plain>
     )
