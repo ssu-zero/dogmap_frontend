@@ -139,6 +139,8 @@
   --space-56: 56px;
 
   --layout-mobile-gutter: 20px;
+  /* Mobile Figma frames reserve the first 62px for the iOS status area. */
+  --figma-safe-area-top: 62px;
 }
 
 * {

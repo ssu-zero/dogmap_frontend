@@ -573,8 +573,8 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="relative flex min-h-[inherit] flex-col px-5 pt-[62px]">
-          <header className="-mx-5 flex h-[60px] shrink-0 items-center px-5">
+        <section className="relative flex min-h-[inherit] flex-col px-5 pt-[var(--figma-safe-area-top)]">
+          <header className="-mx-5 flex h-[60px] shrink-0 items-center px-4">
             <button
               type="button"
               onClick={() => router.back()}
@@ -590,7 +590,7 @@ function FlowScreen({
               alt=""
               width={71}
               height={54}
-              className="absolute right-[17px] top-[-17px] h-[54px] w-[71px] rotate-30"
+              className="absolute right-[17px] top-[-20px] h-[54px] w-[71px] rotate-30"
             />
             <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
               {"개동여지도 약관을\n확인하고 동의해주세요."}
