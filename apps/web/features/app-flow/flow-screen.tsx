@@ -1155,7 +1155,7 @@ function FlowScreen({
                   {iconName ? (
                     <Icon
                       name={iconName}
-                      className={`size-5 ${active ? "invert" : "opacity-[0.41]"}`}
+                      className={`size-5 ${active ? "invert opacity-[0.97]" : "opacity-[0.36]"}`}
                     />
                   ) : null}
                 </button>
