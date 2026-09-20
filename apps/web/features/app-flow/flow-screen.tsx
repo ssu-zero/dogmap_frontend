@@ -572,55 +572,88 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="flex min-h-[inherit] flex-col px-5 pb-8 pt-16">
-          <div>
-            <h1 className="type-head-sb-24 text-gray-800">
-              개동여지도 약관을
-              <br />
-              확인하고 동의해주세요.
+        <section className="relative flex min-h-[inherit] flex-col overflow-hidden px-5 pb-8 pt-[62px]">
+          <header className="-mx-5 flex h-[60px] items-center px-5">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="뒤로 가기"
+              className="flex size-6 items-center justify-center"
+            >
+              <Image
+                src="/icons/terms/arrow-left.svg"
+                alt=""
+                width={11}
+                height={19}
+                className="h-[19px] w-[11px]"
+              />
+            </button>
+          </header>
+          <div className="relative">
+            <Image
+              src="/icons/terms/bone.svg"
+              alt=""
+              width={71}
+              height={54}
+              className="absolute right-[17px] top-[-17px] h-[54px] w-[71px] rotate-30"
+            />
+            <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
+              {"개동여지도 약관을\n확인하고 동의해주세요."}
             </h1>
           </div>
-          <div className="mt-auto space-y-6">
-            <button
-              className="type-body-sb-16 flex w-full items-center gap-3 border-b border-gray-150 p-3 text-left text-gray-700"
-              aria-label="네, 모두 동의합니다."
-              onClick={() => setAllTerms(!allAgreed)}
-              aria-pressed={allAgreed}
-            >
-              <span className={allAgreed ? "text-red-600" : "text-gray-200"}>
-                ●
-              </span>
-              모두 동의하기
-            </button>
-            <div className="space-y-2">
-              <TermRow
-                term="service"
-                label="서비스 이용약관"
-                checked={terms.service}
-                onToggle={setTerm}
-              />
-              <TermRow
-                term="privacy"
-                label="개인정보 처리방침"
-                checked={terms.privacy}
-                onToggle={setTerm}
-              />
-              <TermRow
-                term="location"
-                label="위치 기반 서비스 이용약관"
-                checked={terms.location}
-                onToggle={setTerm}
-              />
+          <div className="mt-[232px] flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
+              <button
+                className="type-body-sb-16 flex h-12 w-full items-center gap-3 border-b border-gray-150 p-3 text-left text-gray-700"
+                aria-label="네, 모두 동의합니다."
+                onClick={() => setAllTerms(!allAgreed)}
+                aria-pressed={allAgreed}
+              >
+                <Image
+                  src={
+                    allAgreed
+                      ? "/icons/terms/check-fill-selected.svg"
+                      : "/icons/terms/check-fill-default.svg"
+                  }
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="size-5"
+                />
+                모두 동의하기
+              </button>
+              <div className="space-y-2">
+                <TermRow
+                  term="service"
+                  label="서비스 이용약관"
+                  checked={terms.service}
+                  onToggle={setTerm}
+                />
+                <TermRow
+                  term="privacy"
+                  label="개인정보 처리방침"
+                  checked={terms.privacy}
+                  onToggle={setTerm}
+                />
+                <TermRow
+                  term="location"
+                  label="위치 기반 서비스 이용약관"
+                  checked={terms.location}
+                  onToggle={setTerm}
+                />
+              </div>
             </div>
+            <Button
+              size="full"
+              aria-label="가입 완료"
+              disabled={!termsAgreed}
+              variant="dark"
+              className="disabled:text-white"
+              onClick={() => router.push("/onboarding/1")}
+            >
+              확인
+            </Button>
           </div>
-          <Button
-            size="full"
-            aria-label="가입 완료"
-            disabled={!termsAgreed}
-            onClick={() => router.push("/onboarding/1")}
-          >
-            확인
-          </Button>
         </section>
       </Plain>
     )
@@ -1643,18 +1676,33 @@ function TermRow({
   onToggle: (term: RequiredTermKey, value: boolean) => void
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded px-3 py-3 bg-gray-50">
+    <div className="flex h-12 items-center justify-between gap-3 rounded bg-gray-50 p-3">
       <button
         type="button"
-        className="type-body-r-16 flex min-w-0 items-center gap-3 text-left"
+        className={`type-body-r-16 flex min-w-0 items-center gap-2 text-left ${
+          checked ? "text-gray-700" : "text-gray-300"
+        }`}
         aria-label={`${label} 동의`}
         aria-pressed={checked}
         onClick={() => onToggle(term, !checked)}
       >
-        <span className={checked ? "text-red-600" : "text-gray-200"}>●</span>
+        <Image
+          src={
+            checked
+              ? "/icons/terms/check-line-selected.svg"
+              : "/icons/terms/check-line-default.svg"
+          }
+          alt=""
+          width={24}
+          height={24}
+          className="size-6"
+        />
         <span>(필수) {label}</span>
       </button>
-      <Link href={`/terms/${term}`} className="type-body-r-16 shrink-0 px-3 text-red-600">
+      <Link
+        href={`/terms/${term}`}
+        className="type-body-r-16 shrink-0 px-3 text-red-600"
+      >
         보기
       </Link>
     </div>
