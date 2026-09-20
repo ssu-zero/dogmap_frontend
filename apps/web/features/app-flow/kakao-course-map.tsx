@@ -334,7 +334,7 @@ export function KakaoCourseMap({
     >
       <div
         ref={containerRef}
-        className={cn("size-full", dark && "brightness-50 saturate-50")}
+        className={cn("size-full", dark && "brightness-[0.65] saturate-50")}
       />
       {loadError ? <MapLoadError onRetry={retry} dark={dark} /> : null}
       {!maps && !loadError ? (
