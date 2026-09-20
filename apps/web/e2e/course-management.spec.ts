@@ -127,7 +127,10 @@ test("opens the course menu, edits the title, and saves a removed spot through t
   await expect(
     page.getByRole("button", { name: "코스 제목 수정" })
   ).toHaveCount(0)
-  await page.getByRole("menuitem", { name: "코스 수정하기" }).click()
+  const editAction = page.getByRole("menuitem", { name: "수정하기" })
+  await expect(editAction).toHaveCSS("background-color", "rgb(48, 48, 48)")
+  await expect(editAction).toHaveCSS("height", "40px")
+  await editAction.click()
   await page.getByRole("button", { name: "코스 제목 수정" }).click()
   await page.getByRole("textbox", { name: "코스 제목" }).fill("바뀐 코스")
   await page.getByRole("button", { name: "스팟 제거" }).first().click()
@@ -162,7 +165,7 @@ test("shares and deletes a course only after choosing menu actions", async ({
   await expect(page.getByRole("region", { name: "코스 스팟" })).toBeVisible()
 
   await page.getByRole("button", { name: "코스 메뉴" }).click()
-  await page.getByRole("menuitem", { name: "코스 공유하기" }).click()
+  await page.getByRole("menuitem", { name: "공유하기" }).click()
   await expect(page.getByRole("status")).toHaveText("코스가 공유되었습니다")
   expect(
     calls.some(
@@ -171,7 +174,7 @@ test("shares and deletes a course only after choosing menu actions", async ({
   ).toBe(true)
 
   await page.getByRole("button", { name: "코스 메뉴" }).click()
-  await page.getByRole("menuitem", { name: "코스 삭제하기" }).click()
+  await page.getByRole("menuitem", { name: "삭제하기" }).click()
   await expect(
     page.getByRole("dialog", { name: "코스 삭제 확인" })
   ).toBeVisible()
