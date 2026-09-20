@@ -138,6 +138,13 @@ test("shows the backend login message when Kakao login is rejected", async ({
     page.getByRole("heading", { name: "로그인을 완료하지 못했어요" })
   ).toBeVisible()
   await expect(page.getByText("카카오 인증이 만료되었어요.")).toBeVisible()
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        sessionStorage.getItem("dogmap.kakao-login-code:expired-kakao-code")
+      )
+    )
+    .toBeNull()
   await page.getByRole("button", { name: "다시 로그인" }).click()
   await expect(page).toHaveURL(/\/login$/)
 })
