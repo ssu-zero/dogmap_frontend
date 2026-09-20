@@ -1473,10 +1473,6 @@ function FlowScreen({
             </p>
           </div>
           <div className="border-t border-gray-100 bg-white px-5 pt-4 pb-6">
-            <p className="type-caption-r-12 mb-3 text-center text-gray-400">
-              {pendingStartCoordinates.lat.toFixed(5)}, {" "}
-              {pendingStartCoordinates.lng.toFixed(5)}
-            </p>
             <Button
               size="full"
               onClick={() => {
