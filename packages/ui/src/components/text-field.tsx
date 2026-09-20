@@ -21,6 +21,7 @@ type TextFieldProps = Omit<ComponentProps<"input">, "size"> &
 function TextField({ state, className, ...props }: TextFieldProps) {
   return (
     <input
+      data-ui="text-field"
       className={cn(
         textFieldVariants({ state }),
         "text-[17px] leading-[1.412] font-medium placeholder:text-gray-150 focus:outline-none",
