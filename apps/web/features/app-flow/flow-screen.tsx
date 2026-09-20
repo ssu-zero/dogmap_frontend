@@ -1845,12 +1845,12 @@ function FlowScreen({
                       <div
                         role="menu"
                         aria-label="코스 관리"
-                        className="absolute top-8 right-0 z-30 flex w-28 flex-col gap-1 rounded-lg bg-gray-500 p-1 shadow-[0_2px_12px_rgba(0,0,0,0.3)]"
+                        className="absolute top-6 right-0 z-30 flex flex-col items-end gap-2"
                       >
                         <button
                           type="button"
                           role="menuitem"
-                          className="type-body-r-14 rounded px-2 py-2 text-center text-gray-50 hover:bg-gray-600"
+                          className="type-body-r-16 whitespace-nowrap rounded-lg bg-gray-600 px-4 py-2 text-gray-100 shadow-[0_0_5px_rgba(91,91,91,0.4)] hover:bg-gray-500"
                           onClick={() => {
                             setCourseMenuOpen(false)
                             setCourseTitleDraft(course.title)
@@ -1859,26 +1859,26 @@ function FlowScreen({
                             setCourseEditing(true)
                           }}
                         >
-                          코스 수정하기
+                          수정하기
                         </button>
                         <button
                           type="button"
                           role="menuitem"
-                          className="type-body-r-14 rounded px-2 py-2 text-center text-gray-50 hover:bg-gray-600"
+                          className="type-body-r-16 whitespace-nowrap rounded-lg bg-gray-600 px-4 py-2 text-gray-100 shadow-[0_0_5px_rgba(91,91,91,0.4)] hover:bg-gray-500"
                           onClick={() => {
                             setCourseMenuOpen(false)
                             setPendingCourseDeletion(true)
                           }}
                         >
-                          코스 삭제하기
+                          삭제하기
                         </button>
                         <button
                           type="button"
                           role="menuitem"
-                          className="type-body-r-14 rounded px-2 py-2 text-center text-gray-50 hover:bg-gray-600"
+                          className="type-body-r-16 whitespace-nowrap rounded-lg bg-gray-600 px-4 py-2 text-gray-100 shadow-[0_0_5px_rgba(91,91,91,0.4)] hover:bg-gray-500"
                           onClick={() => void shareCourse()}
                         >
-                          코스 공유하기
+                          공유하기
                         </button>
                       </div>
                     </>
