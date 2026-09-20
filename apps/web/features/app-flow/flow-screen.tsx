@@ -525,8 +525,7 @@ function FlowScreen({
                 ? <>
                     <span className="text-red-600">{onboarding.dogName}</span>
                     {` 반가워요!\n`}
-                    <span className="text-red-600">{onboarding.dogName}</span>
-                    를 소개해주세요
+                    {onboarding.dogName}를 소개해주세요
                   </>
                 : "반려견 반가워요!\n반려견을 소개해주세요"}
             </h1>
