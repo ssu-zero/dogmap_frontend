@@ -468,11 +468,11 @@ function FlowScreen({
             <TextField
               aria-label="반려견 이름"
               state={
-                onboarding.dogName
-                  ? onboardingNameFocused
-                    ? "writing"
-                    : "completed"
-                  : "default"
+                onboardingNameFocused
+                  ? "writing"
+                  : onboarding.dogName
+                    ? "completed"
+                    : "default"
               }
               value={onboarding.dogName}
               maxLength={20}

@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@workspace/ui/lib/utils"
 
 const textFieldVariants = cva(
-  "flex w-full items-center rounded-full bg-gray-50 px-8 py-4 transition-shadow",
+  "flex w-full items-center rounded-full border border-transparent bg-gray-50 px-8 py-4 transition-[border-color,color] focus:border-gray-150 focus:text-gray-800",
   {
     variants: {
       state: {
