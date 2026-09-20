@@ -205,8 +205,9 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-/* Text fields use their own Figma-specified border as the focus indicator. */
-input[data-ui="text-field"]:focus-visible {
+/* Inputs with a Figma-specified border use it as their focus indicator. */
+input[data-ui="text-field"]:focus-visible,
+input[data-ui="course-title"]:focus-visible {
   outline: none;
   outline-offset: 0;
 }

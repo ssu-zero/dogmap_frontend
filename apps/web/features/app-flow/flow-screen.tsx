@@ -2014,6 +2014,7 @@ function FlowScreen({
                 {editingCourseTitle ? (
                   <input
                     aria-label="코스 제목"
+                    data-ui="course-title"
                     type="text"
                     autoFocus
                     maxLength={80}
@@ -2027,7 +2028,7 @@ function FlowScreen({
                         setEditingCourseTitle(false)
                       }
                     }}
-                    className="type-head-sb-24 min-w-0 flex-1 border-0 border-b border-red-600 bg-gray-800 px-3 py-1 text-gray-50 outline-none focus:border-red-600 focus:outline-none"
+                    className="type-head-sb-24 min-w-20 max-w-[calc(100%_-_40px)] flex-none border-0 border-b border-red-500 bg-gray-800 px-3 py-1 text-gray-50 [field-sizing:content]"
                   />
                 ) : (
                   <h1 className="type-head-sb-24 min-w-0 py-1 text-gray-50">
