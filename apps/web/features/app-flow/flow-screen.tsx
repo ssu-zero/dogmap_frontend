@@ -1293,40 +1293,45 @@ function FlowScreen({
               </span>
             </button>
 
-            <fieldset className="space-y-3 rounded-xl bg-gray-100/40 px-5 pb-4 pt-1">
-              <legend className="type-head-sb-18 w-full border-b border-gray-150 py-3 text-gray-600">
-                시간
-              </legend>
-              <div className="space-y-2">
+            <section className="rounded-xl bg-gray-100/40 px-5 pb-4 pt-1">
+              <div className="border-b border-gray-150 py-3">
+                <h2 className="type-head-sb-18 text-gray-600">시간</h2>
+              </div>
+              <div className="mt-3 space-y-2">
                 {(
                   [
                     ["시작 시간", "startTime"],
                     ["종료 시간", "endTime"],
                   ] as const
-                ).map(([label, field]) => (
-                  <div
-                    key={field}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="type-body-sb-14 text-gray-400">
-                      {label}
-                    </span>
-                    <button
-                      type="button"
-                      className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 whitespace-nowrap shadow-[0_0_2px_var(--color-gray-100)]"
-                      onClick={() => {
-                        setCoursePicker(field)
-                        setCoursePickerValue(courseDraft[field] || "13:00")
-                      }}
+                ).map(([label, field]) => {
+                  const { period, value } = getCourseTimeParts(courseDraft[field])
+
+                  return (
+                    <div
+                      key={field}
+                      className="flex items-center justify-between"
                     >
-                      <span className="type-body-r-14 whitespace-nowrap text-gray-600">
-                        {formatCourseTime(courseDraft[field])}
+                      <span className="type-body-sb-14 text-gray-400">
+                        {label}
                       </span>
-                    </button>
-                  </div>
-                ))}
+                      <button
+                        type="button"
+                        className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)]"
+                        onClick={() => {
+                          setCoursePicker(field)
+                          setCoursePickerValue(courseDraft[field] || "13:00")
+                        }}
+                      >
+                        <span className="type-body-r-14 inline-flex items-center gap-0.5 whitespace-nowrap text-gray-600">
+                          {period ? <span>{period}</span> : null}
+                          <span>{value}</span>
+                        </span>
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
-            </fieldset>
+            </section>
 
             <button
               type="button"
@@ -2515,15 +2520,15 @@ function formatCourseDate(date: string) {
   return date ? date.replaceAll("-", ".") : "날짜 선택"
 }
 
-function formatCourseTime(time: string) {
-  if (!time) return "시간 선택"
+function getCourseTimeParts(time: string) {
+  if (!time) return { period: "", value: "시간 선택" }
 
   const [hourValue, minute = "00"] = time.split(":")
   const hour = Number(hourValue)
   const period = hour < 12 ? "오전" : "오후"
   const displayHour = String(hour % 12 || 12).padStart(2, "0")
 
-  return `${period} ${displayHour} : ${minute}`
+  return { period, value: `${displayHour} : ${minute}` }
 }
 
 function formatCourseSpotTime(startTime: string | undefined, index: number) {
