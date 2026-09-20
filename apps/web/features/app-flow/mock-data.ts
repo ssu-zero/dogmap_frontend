@@ -225,7 +225,7 @@ export type OnboardingProfile = {
 export const initialOnboardingProfile: OnboardingProfile = {
   dogName: "",
   dogSize: null,
-  birthYear: "",
+  birthYear: String(new Date().getFullYear()),
   profileImagePreview: null,
 }
 

@@ -405,7 +405,7 @@ function FlowScreen({
     const nameValid = isDogNameValid(onboarding.dogName)
     return (
       <Plain>
-        <section className="flex min-h-[inherit] flex-col bg-white pt-[var(--figma-safe-area-top)]">
+        <section className="flex min-h-[inherit] flex-col bg-white">
           <header className="flex h-[60px] shrink-0 items-center px-4 py-3">
             <button
               type="button"
@@ -417,7 +417,7 @@ function FlowScreen({
             </button>
           </header>
           <div className="flex min-h-0 flex-1 flex-col px-5">
-            <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
+            <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.023em] text-gray-800">
               {"함께 여행할 친구를\n소개해주세요!"}
             </h1>
             <div className="relative mx-auto mt-8 size-30 shrink-0">
@@ -508,11 +508,22 @@ function FlowScreen({
     )
     return (
       <Plain>
-        <section className="flex min-h-[inherit] flex-col bg-white pt-[var(--figma-safe-area-top)]">
-          <header className="h-[60px] shrink-0" aria-label="반려견 정보" />
+        <section className="flex min-h-[inherit] flex-col bg-white">
+          <header className="flex h-[60px] shrink-0 items-center px-4 py-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="뒤로 가기"
+              className="flex size-6 items-center justify-center"
+            >
+              <Icon name="arrowLeft" className="size-6" />
+            </button>
+          </header>
           <div className="flex min-h-0 flex-1 flex-col px-5">
-            <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
-              {`${onboarding.dogName || "반려견"} 반가워요!\n${onboarding.dogName || "반려견"}를 소개해주세요`}
+            <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.023em] text-gray-800">
+              {onboarding.dogName
+                ? `${onboarding.dogName} 반가워요!\n${onboarding.dogName}를 소개해주세요`
+                : "반려견 반가워요!\n반려견을 소개해주세요"}
             </h1>
             <div className="-mx-1 mt-7">
               <fieldset>
@@ -534,6 +545,7 @@ function FlowScreen({
                         onboarding.dogSize === size ? "selected" : "default"
                       }
                       description={description}
+                      descriptionClassName="text-[14px] leading-[1.5] font-normal tracking-[-0.01em] text-gray-200"
                       className={`h-16 min-h-0 min-w-0 w-full ${
                         onboarding.dogSize && onboarding.dogSize !== size
                           ? "opacity-40"
@@ -546,12 +558,12 @@ function FlowScreen({
                   ))}
                 </div>
               </fieldset>
-              <label className="mt-6 block space-y-3 px-1">
-                <span className="type-body-sb-16 text-gray-800">출생 연도</span>
+              <label className="mt-7 block space-y-3 px-1">
+                <span className="type-body-sb-16 text-gray-900">출생연도</span>
                 <span className="relative block">
                   <select
                     aria-label="출생 연도"
-                    className={`type-body-r-16 h-12 w-full appearance-none rounded-xl bg-gray-50 px-6 pr-12 focus:outline-none ${
+                    className={`type-body-sb-16 h-12 w-full appearance-none rounded-xl bg-gray-50 px-6 pr-12 focus:outline-none ${
                       onboarding.birthYear ? "text-gray-800" : "text-gray-150"
                     }`}
                     value={onboarding.birthYear}
@@ -568,17 +580,26 @@ function FlowScreen({
                       </option>
                     ))}
                   </select>
-                  <Icon
-                    name="arrowDown"
+                  <Image
+                    src="/icons/onboarding/arrow-down.svg"
+                    alt=""
+                    width={24}
+                    height={24}
                     className="pointer-events-none absolute right-6 top-1/2 size-6 -translate-y-1/2"
                   />
                 </span>
               </label>
             </div>
             <div className="mt-auto pt-8">
-              <div className="flex rounded-xl bg-gray-50 px-5 py-3">
-                <Icon name="pawFill" className="mr-1 size-5 shrink-0" />
-                <p className="type-body-r-14 break-keep text-gray-200">
+              <div className="flex flex-col gap-1 rounded-xl bg-gray-50 px-5 py-3">
+                <Image
+                  src="/icons/onboarding/paw-fill.svg"
+                  alt=""
+                  width={20}
+                  height={20}
+                  className="size-5"
+                />
+                <p className="type-body-r-14 break-keep font-medium tracking-[-0.019em] text-gray-200">
                   체중·나이는 산책 스팟의 권장 체류시간을 계산하는데 쓰여요.
                   어린·노령 반려동물은 무리 없는 코스로 조정돼요.
                 </p>
@@ -587,6 +608,7 @@ function FlowScreen({
                 <Button
                   size="full"
                   variant="dark"
+                  className="text-[18px] leading-[1.3] tracking-[-0.01em]"
                   disabled={
                     !complete ||
                     registerDog.isPending ||
@@ -617,15 +639,10 @@ function FlowScreen({
                     })
                   }}
                 >
-                  {registerDog.isPending ? "프로필 등록 중" : "개동여지도 시작하기"}
+                  {registerDog.isPending ? "프로필 등록 중" : "다음"}
                 </Button>
               </div>
             </div>
-            {!demoMode && !getSignupToken() ? (
-              <p role="alert" className="type-caption-r-12 -mt-4 pb-6 text-red-600">
-                카카오 로그인을 먼저 완료해주세요.
-              </p>
-            ) : null}
             {registerDog.isError ? (
               <p role="alert" className="type-caption-r-12 -mt-4 pb-6 text-red-600">
                 {registerDog.error.message}
@@ -641,7 +658,7 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="relative flex min-h-[inherit] flex-col px-5 pt-[var(--figma-safe-area-top)]">
+        <section className="relative flex min-h-[inherit] flex-col px-5">
           <header className="-mx-5 flex h-[60px] shrink-0 items-center px-4">
             <button
               type="button"
@@ -727,7 +744,7 @@ function FlowScreen({
     const detail = termsContent[selectedTerm]
     return (
       <Plain>
-        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white pt-[var(--figma-safe-area-top)]">
+        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white">
           <header className="flex h-[60px] shrink-0 items-center px-4 py-3">
             <button
               type="button"

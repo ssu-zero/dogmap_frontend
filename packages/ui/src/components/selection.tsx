@@ -18,10 +18,14 @@ const choiceVariants = cva(
   }
 )
 type ChoiceButtonProps = ComponentProps<"button"> &
-  VariantProps<typeof choiceVariants> & { description?: string }
+  VariantProps<typeof choiceVariants> & {
+    description?: string
+    descriptionClassName?: string
+  }
 function ChoiceButton({
   state,
   description,
+  descriptionClassName,
   className,
   children,
   ...props
@@ -39,7 +43,9 @@ function ChoiceButton({
     >
       {children}
       {description ? (
-        <span className="type-caption-r-12">{description}</span>
+        <span className={cn("type-caption-r-12", descriptionClassName)}>
+          {description}
+        </span>
       ) : null}
     </button>
   )
