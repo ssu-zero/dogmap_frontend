@@ -68,10 +68,7 @@ function BottomNavigation({
           >
             <Icon
               name={active ? item.activeIcon : item.icon}
-              className={cn(
-                "size-6",
-                !active && item.value === "course" && "opacity-[0.41]"
-              )}
+              className={cn("size-6", !active && "opacity-[0.41]")}
             />
             {item.label}
           </button>
