@@ -1151,13 +1151,13 @@ function FlowScreen({
                   className={`type-body-r-16 inline-flex items-center gap-1 rounded-full px-3 py-1 ${active ? "bg-gray-900 text-gray-50" : "bg-gray-100 text-gray-200"}`}
                   onClick={() => setCourseListFilter(filter)}
                 >
+                  {filter}
                   {iconName ? (
                     <Icon
                       name={iconName}
                       className={`size-5 ${active ? "invert" : "opacity-[0.41]"}`}
                     />
                   ) : null}
-                  {filter}
                 </button>
               )
             })}
