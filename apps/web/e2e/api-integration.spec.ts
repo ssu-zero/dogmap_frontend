@@ -21,7 +21,7 @@ const dog = {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.route("**/backend-api/**", async (route) => {
+  await page.route("**/api.dogmap.store/**", async (route) => {
     const request = route.request()
     const pathname = new URL(request.url()).pathname
 
@@ -72,7 +72,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
   await useLiveApiMode(page)
   let loginBody: unknown
 
-  await page.route("**/backend-api/api/auth/kakao/login", async (route) => {
+  await page.route("**/api.dogmap.store/api/auth/kakao/login", async (route) => {
     loginBody = route.request().postDataJSON()
     await route.fulfill({
       status: 200,
@@ -87,7 +87,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
       }),
     })
   })
-  await page.route("**/backend-api/api/dogs/me", async (route) => {
+  await page.route("**/api.dogmap.store/api/dogs/me", async (route) => {
     expect(route.request().headers().authorization).toBe(
       "Bearer access-from-server"
     )
@@ -97,7 +97,7 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
       body: JSON.stringify(dog),
     })
   })
-  await page.route("**/backend-api/api/courses*", async (route) => {
+  await page.route("**/api.dogmap.store/api/courses*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -124,7 +124,7 @@ test("shows the backend login message when Kakao login is rejected", async ({
   page,
 }) => {
   await useLiveApiMode(page)
-  await page.route("**/backend-api/api/auth/kakao/login", async (route) => {
+  await page.route("**/api.dogmap.store/api/auth/kakao/login", async (route) => {
     await route.fulfill({
       status: 401,
       contentType: "application/json",
@@ -153,7 +153,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
   await useLiveApiMode(page)
   let registrationBody: Record<string, unknown> | undefined
 
-  await page.route("**/backend-api/api/auth/kakao/login", async (route) => {
+  await page.route("**/api.dogmap.store/api/auth/kakao/login", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -167,7 +167,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
       }),
     })
   })
-  await page.route("**/backend-api/api/dogs", async (route) => {
+  await page.route("**/api.dogmap.store/api/dogs", async (route) => {
     expect(route.request().headers().authorization).toBe(
       "Bearer signup-from-server"
     )
@@ -178,7 +178,7 @@ test("registers the onboarding dog with the signup token", async ({ page }) => {
       body: JSON.stringify({ access_token: "new-access-token", dog }),
     })
   })
-  await page.route("**/backend-api/api/courses*", async (route) => {
+  await page.route("**/api.dogmap.store/api/courses*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -218,14 +218,14 @@ test("creates a course through the authenticated backend endpoint", async ({
   await useLiveApiMode(page, "course-access-token")
   let createBody: Record<string, unknown> | undefined
 
-  await page.route("**/backend-api/api/dogs/me", async (route) => {
+  await page.route("**/api.dogmap.store/api/dogs/me", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(dog),
     })
   })
-  await page.route("**/backend-api/api/courses", async (route) => {
+  await page.route("**/api.dogmap.store/api/courses", async (route) => {
     if (route.request().method() !== "POST") {
       await route.fulfill({
         status: 200,
@@ -277,7 +277,7 @@ test("creates a course through the authenticated backend endpoint", async ({
       }),
     })
   })
-  await page.route("**/backend-api/api/courses/91/places", async (route) => {
+  await page.route("**/api.dogmap.store/api/courses/91/places", async (route) => {
     expect(route.request().method()).toBe("PUT")
     await route.fulfill({
       status: 200,
@@ -353,7 +353,7 @@ test("loads nearby companion facilities from the backend", async ({
   await useLiveApiMode(page, "places-access-token")
   let requestedUrl = ""
 
-  await page.route("**/backend-api/api/places*", async (route) => {
+  await page.route("**/api.dogmap.store/api/places*", async (route) => {
     requestedUrl = route.request().url()
     await route.fulfill({
       status: 200,
@@ -398,7 +398,7 @@ test("loads and patches the server-backed dog profile", async ({ page }) => {
   let patchBody: unknown
   let currentDog = dog
 
-  await page.route("**/backend-api/api/dogs/me", async (route) => {
+  await page.route("**/api.dogmap.store/api/dogs/me", async (route) => {
     expect(route.request().headers().authorization).toBe(
       "Bearer profile-access-token"
     )

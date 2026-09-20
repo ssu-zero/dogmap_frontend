@@ -1,13 +1,24 @@
 import ky, { HTTPError, type ResponsePromise } from "ky"
 import { z } from "zod"
 
+const directApiOrigin = "https://api.dogmap.store/"
+
 const clientEnvSchema = z.object({
-  NEXT_PUBLIC_API_URL: z.string().min(1).default("/backend-api/"),
+  NEXT_PUBLIC_API_URL: z.string().min(1).optional(),
 })
 
 const clientEnv = clientEnvSchema.parse({
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 })
+
+// Older deployments used the same-origin `/backend-api/` proxy. That proxy
+// adds another failure point and, when its upstream URL is misconfigured, can
+// accidentally call the frontend itself. Keep a custom absolute API URL
+// configurable, but always move the legacy proxy value to the real API.
+const apiBaseUrl =
+  clientEnv.NEXT_PUBLIC_API_URL?.startsWith("/backend-api")
+    ? directApiOrigin
+    : (clientEnv.NEXT_PUBLIC_API_URL ?? directApiOrigin)
 
 const ACCESS_TOKEN_STORAGE_KEY = "dogmap.access-token"
 const SIGNUP_TOKEN_STORAGE_KEY = "dogmap.signup-token"
@@ -77,7 +88,7 @@ export function getBearerToken() {
 }
 
 export const apiClient = ky.create({
-  baseUrl: clientEnv.NEXT_PUBLIC_API_URL,
+  baseUrl: apiBaseUrl,
   timeout: 10_000,
   retry: {
     limit: 1,

@@ -27,9 +27,9 @@ the unsupported Harness branches. Production and ordinary local development use
 `live`; they must never silently fall back to generated mock data after an API
 failure.
 
-Browser API calls use the same-origin `/backend-api/` rewrite. Its server-side
-target is configured with `DOGMAP_API_ORIGIN` and defaults to the backend's
-documented `http://localhost:8000` address.
+Browser API calls go directly to `https://api.dogmap.store/`. The backend CORS
+policy explicitly allows the local, production, and Dogmap Vercel preview
+origins used by this app.
 
 ## Continuous completion loop
 
