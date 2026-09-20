@@ -573,7 +573,7 @@ function FlowScreen({
     const allAgreed = requiredTermKeys.every((term) => terms[term])
     return (
       <Plain>
-        <section className="relative flex h-svh max-h-svh min-h-[inherit] flex-col overflow-hidden px-5 pt-[62px]">
+        <section className="relative flex min-h-svh flex-col px-5 pt-[62px]">
           <header className="-mx-5 flex h-[60px] shrink-0 items-center px-5">
             <button
               type="button"
