@@ -5,11 +5,11 @@ export default function NotFound() {
   return (
     <main className="layout-mobile flex flex-col items-center justify-center gap-2 bg-gray-50 px-5 text-center">
       <Image
-        src="/img/dog.png"
+        src="/img/empty-state-404.png"
         alt="길을 찾는 반려견"
-        width={120}
-        height={120}
-        className="mb-2 h-[131px] w-auto object-contain"
+        width={184}
+        height={131}
+        className="mb-2 h-[131px] w-[184px] object-contain"
       />
       <h1 className="type-head-sb-18">페이지를 찾을 수 없습니다</h1>
       <p className="type-body-r-14 text-gray-300">
