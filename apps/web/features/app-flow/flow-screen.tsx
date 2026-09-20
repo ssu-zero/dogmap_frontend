@@ -664,13 +664,65 @@ function FlowScreen({
     const detail = termsContent[selectedTerm]
     return (
       <Plain>
-        <Header title="약관 상세" onBack={() => router.back()} />
-        <article className="space-y-4 px-5 py-6">
-          <h1 className="type-head-sb-22">{detail.title}</h1>
-          <p className="type-body-r-14 whitespace-pre-line text-gray-500">
-            {detail.body}
-          </p>
-        </article>
+        <section className="relative flex h-svh max-h-svh min-h-[inherit] flex-col overflow-hidden bg-white pt-[62px]">
+          <header className="flex h-[60px] shrink-0 items-center px-5 py-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="뒤로 가기"
+              className="flex size-6 items-center justify-center"
+            >
+              <Image
+                src="/icons/terms/arrow-left.svg"
+                alt=""
+                width={11}
+                height={19}
+                className="h-[19px] w-[11px]"
+              />
+            </button>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-32">
+            <div className="flex flex-col gap-2">
+              <h1 className="type-head-sb-24 text-gray-800">{detail.title}</h1>
+              <p className="type-body-r-13 rounded bg-gray-50 px-3 py-2 text-gray-200">
+                ( {detail.effectiveDate} )
+              </p>
+            </div>
+            <article className="mt-6 flex flex-col gap-5 pb-5">
+              {detail.sections.map((section) => (
+                <section key={section.heading} className="space-y-2">
+                  <h2 className="type-head-sb-18 text-gray-800">
+                    {section.heading}
+                  </h2>
+                  {section.paragraphs?.map((paragraph) => (
+                    <p
+                      key={paragraph}
+                      className="type-body-r-14 break-keep text-gray-400"
+                    >
+                      {paragraph}
+                    </p>
+                  ))}
+                  {section.items ? (
+                    <ol className="type-body-r-14 list-decimal space-y-0.5 break-keep pl-5 text-gray-400 marker:text-gray-400">
+                      {section.items.map((item) => (
+                        <li key={item} className="pl-0.5">
+                          {item}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : null}
+                </section>
+              ))}
+            </article>
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-b from-white/0 via-white/90 to-white pt-6">
+            <div className="pointer-events-auto px-5 pb-6">
+              <Button size="full" variant="dark" onClick={() => router.back()}>
+                확인
+              </Button>
+            </div>
+          </div>
+        </section>
       </Plain>
     )
   }
