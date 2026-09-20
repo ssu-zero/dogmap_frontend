@@ -89,6 +89,9 @@ type Screen =
   | "mypage-edit"
   | "error"
 
+const onboardingCtaClass =
+  "px-4 text-[18px] leading-[1.3] tracking-[-0.01em] disabled:bg-gray-150 disabled:text-white"
+
 /**
  * Entry state deliberately lives at the root route: the production app must
  * never expose an authenticated home screen merely because a visitor opened
@@ -488,7 +491,7 @@ function FlowScreen({
               <Button
                 size="full"
                 variant="dark"
-                className="text-[18px] leading-[1.3] tracking-[-0.01em]"
+                className={onboardingCtaClass}
                 disabled={!nameValid}
                 onClick={() => router.push("/onboarding/2")}
               >
@@ -612,7 +615,7 @@ function FlowScreen({
                 <Button
                   size="full"
                   variant="dark"
-                  className="text-[18px] leading-[1.3] tracking-[-0.01em]"
+                  className={onboardingCtaClass}
                   disabled={
                     !complete ||
                     registerDog.isPending ||
