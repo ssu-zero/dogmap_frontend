@@ -1860,7 +1860,7 @@ function FlowScreen({
     return (
       <AppShell tab="community">
         <Header title="커뮤니티" />
-        <section className="space-y-4 px-5 py-5">
+        <section className="space-y-9 px-5 pb-5 pt-0">
           <>
               <div
                 className="flex gap-2"
