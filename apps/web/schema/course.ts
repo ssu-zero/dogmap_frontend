@@ -69,6 +69,8 @@ export const courseSchema = z.object({
 export const courseSummarySchema = z.object({
   course_id: z.number().int(),
   title: z.string(),
+  created_at: backendDateTimeSchema.optional(),
+  dog_size: z.enum(["SMALL", "MEDIUM", "LARGE"]).nullable().optional(),
   start_lat: z.number(),
   start_lng: z.number(),
   distance_meters: z.number().int().nullable().optional(),
@@ -89,6 +91,12 @@ export const courseSaveStatusSchema = z.object({
   course_id: z.number().int(),
   is_saved: z.boolean(),
   save_count: z.number().int(),
+})
+
+export const courseLikeStatusSchema = z.object({
+  course_id: z.number().int(),
+  is_liked: z.boolean(),
+  like_count: z.number().int(),
 })
 
 export const coursePlacesReplaceRequestSchema = z.object({

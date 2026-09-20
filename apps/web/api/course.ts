@@ -2,6 +2,7 @@ import { apiClient, parseResponse } from "@/api/client"
 import {
   courseCreateRequestSchema,
   coursePlacesReplaceRequestSchema,
+  courseLikeStatusSchema,
   courseSaveStatusSchema,
   courseSchema,
   myCoursesSchema,
@@ -72,6 +73,20 @@ export function unsaveCourse(courseId: string) {
   return parseResponse(
     apiClient.delete(`api/courses/${courseId}/save`),
     courseSaveStatusSchema
+  )
+}
+
+export function likeCourse(courseId: string) {
+  return parseResponse(
+    apiClient.post(`api/courses/${courseId}/like`),
+    courseLikeStatusSchema
+  )
+}
+
+export function unlikeCourse(courseId: string) {
+  return parseResponse(
+    apiClient.delete(`api/courses/${courseId}/like`),
+    courseLikeStatusSchema
   )
 }
 

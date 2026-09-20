@@ -86,7 +86,11 @@ export function apiCourseToFlowCourse(
     placeDetails: course.places.map((place) => ({
       category: place.category,
       visitTime: place.visit_time,
+      lat: place.lat,
+      lng: place.lng,
     })),
+    likeCount: course.like_count,
+    liked: course.is_liked,
     date: walkDate
       ? new Intl.DateTimeFormat("sv-SE", {
           timeZone: "Asia/Seoul",
@@ -119,11 +123,28 @@ export function nearbyCourseToFlowCourse(
     userId: course.is_owner ? currentUserId : "nearby",
     title: course.title,
     duration: course.total_duration_minutes,
+    createdAt: course.created_at
+      ? new Intl.DateTimeFormat("sv-SE", {
+          timeZone: "Asia/Seoul",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date(course.created_at)).replaceAll("-", ".")
+      : undefined,
+    dogSize: course.dog_size === "SMALL"
+      ? "소형"
+      : course.dog_size === "MEDIUM"
+        ? "중형"
+        : course.dog_size === "LARGE"
+          ? "대형"
+          : undefined,
     places: [],
     startCoordinates: { lat: course.start_lat, lng: course.start_lng },
     summaryOnly: true,
     placeCount: course.place_count,
     saved: course.is_saved,
+    likeCount: course.like_count,
+    liked: course.is_liked,
   }
 }
 

@@ -7,10 +7,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { Button } from "@workspace/ui/components/button"
-import { Chip } from "@workspace/ui/components/chip"
+import { Chip, PawActivity } from "@workspace/ui/components/chip"
 import { EmptyState } from "@workspace/ui/components/empty-state"
 import { Header } from "@workspace/ui/components/header"
-import { Icon } from "@workspace/ui/components/icon"
+import { Icon, iconSources } from "@workspace/ui/components/icon"
 import {
   CourseCard,
   CourseListItem,
@@ -23,6 +23,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import homeDogImage from "../../../../packages/ui/src/assets/images/dog.png"
 
 import {
   ApiError,
@@ -37,12 +38,14 @@ import {
   createCourseMutationOptions,
   courseQueryKeys,
   deleteCourseMutationOptions,
+  likeCourseMutationOptions,
   myCoursesQueryOptions,
   nearbyCoursesQueryOptions,
   replaceCoursePlacesMutationOptions,
   savedCoursesQueryOptions,
   saveCourseMutationOptions,
   shareCourseMutationOptions,
+  unlikeCourseMutationOptions,
   updateCourseTitleMutationOptions,
 } from "@/query/course"
 import {
@@ -69,6 +72,7 @@ import {
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
+import { kakaoPlaceUrl } from "./place-links"
 import {
   CourseGenerationScreen,
   GENERATION_MINIMUM_DURATION_MS,
@@ -107,8 +111,10 @@ type Screen =
   | "course-start-location"
   | "generating"
   | "course-detail"
+  | "course-map"
   | "community"
   | "community-detail"
+  | "community-save"
   | "archive"
   | "archive-detail"
   | "report"
@@ -147,10 +153,12 @@ function FlowScreen({
   screen,
   courseId,
   term,
+  mapReturnTo,
 }: {
   screen: Screen
   courseId?: string
   term?: RequiredTermKey
+  mapReturnTo?: "community" | "courses"
 }) {
   const router = useRouter()
   const {
@@ -167,6 +175,9 @@ function FlowScreen({
     locationPermissionPromptOpen,
     onboarding,
     saveCourse,
+    communityLikes,
+    removedCommunityCourseIds,
+    toggleCommunityLike,
     saveDiary,
     diaries,
     updateCourseDraft,
@@ -183,6 +194,7 @@ function FlowScreen({
   const queryClient = useQueryClient()
   const demoMode = useDemoMode()
   const generationStarted = useRef(false)
+  const initializedSaveCourseId = useRef<string | null>(null)
   const [generationAttempt, setGenerationAttempt] = useState(0)
   const [generationStep, setGenerationStep] = useState(0)
   const [generationMinimumElapsed, setGenerationMinimumElapsed] =
@@ -207,6 +219,8 @@ function FlowScreen({
   const deleteApiCourse = useMutation(deleteCourseMutationOptions())
   const shareApiCourse = useMutation(shareCourseMutationOptions())
   const saveApiCourse = useMutation(saveCourseMutationOptions())
+  const likeApiCourse = useMutation(likeCourseMutationOptions())
+  const unlikeApiCourse = useMutation(unlikeCourseMutationOptions())
   const updateWalkLog = useMutation(updateWalkLogMutationOptions())
   const updateDog = useMutation(updateMyDogMutationOptions())
   const myDog = useQuery({
@@ -217,8 +231,8 @@ function FlowScreen({
     ...nearbyCoursesQueryOptions({
       lat: coordinates.lat,
       lng: coordinates.lng,
-      radius_m: 3000,
-      limit: 10,
+      radius_m: screen === "community" ? 20_000 : 3000,
+      limit: screen === "community" ? 50 : 10,
     }),
     enabled:
       !demoMode &&
@@ -241,7 +255,9 @@ function FlowScreen({
       !demoMode &&
       Boolean(courseId) &&
       (screen === "course-detail" ||
+        screen === "course-map" ||
         screen === "community-detail" ||
+        screen === "community-save" ||
         screen === "archive-detail"),
   })
   const walkLogs = useQuery({
@@ -251,8 +267,12 @@ function FlowScreen({
       !demoMode &&
       (screen === "archive" || screen === "archive-detail" || screen === "report"),
   })
-  const [saved, setSaved] = useState(false)
-  const [liked, setLiked] = useState(false)
+  const [liveLike, setLiveLike] = useState<
+    Record<string, { liked: boolean; count: number }>
+  >({})
+  const [saveDate, setSaveDate] = useState("")
+  const [saveStartTime, setSaveStartTime] = useState("")
+  const [saveEndTime, setSaveEndTime] = useState("")
   const [listOpen, setListOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null)
   const [courseEditing, setCourseEditing] = useState(false)
@@ -432,9 +452,32 @@ function FlowScreen({
       ...displayedCourses,
       ...serverRecommendations,
     ],
-    demoMode
+    demoMode,
+    removedCommunityCourseIds
   )
   const ownCourse = course?.userId === user.id
+  const communityLike = course
+    ? demoMode
+      ? (communityLikes[course.id] ?? {
+          liked: course.liked ?? false,
+          count: course.likeCount ?? 0,
+        })
+      : (liveLike[course.id] ?? {
+          liked: course.liked ?? false,
+          count: course.likeCount ?? 0,
+        })
+    : { liked: false, count: 0 }
+  const isCourseSaved = Boolean(
+    course &&
+      (course.saved ||
+        ownCourse ||
+        courses.some((item) => item.id === course.id && item.saved))
+  )
+  const courseMarkerPoints = course && course.placeDetails &&
+    course.placeDetails.length === course.places.length &&
+    course.placeDetails.every((place) => Number.isFinite(place.lat) && Number.isFinite(place.lng))
+      ? course.placeDetails.map((place) => ({ lat: place.lat!, lng: place.lng! }))
+      : undefined
   const generationRequiresLogin =
     screen === "generating" && !demoMode && !hasAccessToken
   const generationDisplayError = generationRequiresLogin
@@ -594,6 +637,43 @@ function FlowScreen({
     const timeout = window.setTimeout(() => setCourseToast(null), 2_000)
     return () => window.clearTimeout(timeout)
   }, [courseToast])
+
+  useEffect(() => {
+    if (screen !== "community-save" || !course) return
+    if (initializedSaveCourseId.current === course.id) return
+    initializedSaveCourseId.current = course.id
+    const today = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date())
+    const date = course.date && course.date >= today ? course.date : today
+    const start = course.startTime ?? "13:00"
+    setSaveDate(date)
+    setSaveStartTime(start)
+    setSaveEndTime(
+      course.endTime && isValidCourseTimeRange(start, course.endTime)
+        ? course.endTime
+        : (minimumCourseEndTime(start) ?? "14:00")
+    )
+  }, [course, screen])
+
+  useEffect(() => {
+    if (screen !== "course-detail" || !course || !ownCourse) return
+    if (new URLSearchParams(window.location.search).get("edit") !== "1") return
+    setCourseTitleDraft(course.title)
+    setRemovedCourseSpotIndexes([])
+    setCourseActionError(null)
+    setCourseEditing(true)
+  }, [course?.id, ownCourse, screen])
+
+  useEffect(() => {
+    if (screen !== "courses") return
+    const filter = new URLSearchParams(window.location.search).get("filter")
+    if (filter === "saved") setCourseListFilter("내가 저장한")
+    else if (filter === "mine") setCourseListFilter("내가 만든")
+  }, [screen])
 
   if (screen === "login") {
     return (
@@ -1119,12 +1199,12 @@ function FlowScreen({
             className="absolute left-7 top-2 h-[30px] w-[124px]"
           />
           <Image
-            src="/img/home-dog.png"
+            src={homeDogImage}
             alt="여행을 준비하는 반려견"
-            width={206}
-            height={260}
+            width={180}
+            height={200}
             priority
-            className="pointer-events-none absolute left-[187px] top-[46px] h-[260px] w-[206px] object-cover"
+            className="pointer-events-none absolute right-0 top-6 h-[200px] w-[180px] object-contain object-bottom"
           />
           <div className="absolute left-5 top-[75px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
@@ -1189,6 +1269,8 @@ function FlowScreen({
                   companionLabel={place.pet_accompany_type ?? "반려견 동반"}
                   pawCount={Math.max(place.like_count, 0)}
                   imageUrl={normalizePlaceImage(place.image_url)}
+                  lat={place.lat}
+                  lng={place.lng}
                 />
               ))
             ) : homePlacesPending ? (
@@ -1268,8 +1350,8 @@ function FlowScreen({
   if (screen === "courses")
     return (
       <AppShell tab="course">
-        <Header title="코스" />
-        <section className="relative flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-24 pt-2">
+        <Header title="내 코스" className="h-[60px] px-4 [&_h1]:text-xl" />
+        <section className="relative flex min-h-[calc(100svh-8.5rem)] flex-col px-5 pb-24">
           <div className="flex gap-2 py-2" role="tablist" aria-label="코스 목록">
             {(["전체", "내가 만든", "내가 저장한"] as const).map((filter) => {
               const active = courseListFilter === filter
@@ -1322,7 +1404,7 @@ function FlowScreen({
               />
             </div>
           ) : (
-            <div className="space-y-4 py-3">
+            <div className="space-y-4 pb-3 pt-5">
                 {displayedCourses
                   .filter((item) =>
                     courseListFilter === "전체"
@@ -1340,7 +1422,8 @@ function FlowScreen({
                     <CourseCard
                       title={item.title}
                       hours={item.duration / 60}
-                      spots={item.places.length}
+                      spots={item.placeCount ?? item.places.length}
+                      createdAt={item.createdAt ?? item.date?.replaceAll("-", ".")}
                     />
                   </button>
                   ))}
@@ -1348,10 +1431,9 @@ function FlowScreen({
           )}
           <Button
             size="fab"
-            className="absolute right-5 bottom-4 bg-gray-600 text-gray-50 hover:bg-gray-600"
+            className="absolute right-5 bottom-4 bg-red-600 text-white hover:bg-red-700"
             onClick={() => router.push("/courses/new")}
           >
-            <Icon name="plus" className="size-5 invert" />
             코스 만들기
           </Button>
         </section>
@@ -1665,6 +1747,52 @@ function FlowScreen({
       />
     )
 
+  if (screen === "course-map") {
+    const returnPath = mapReturnTo === "community"
+      ? `/community/${courseId}`
+      : `/courses/${courseId}`
+    return (
+      <Plain>
+        <section className="relative h-full min-h-[inherit] bg-gray-100">
+          {course ? (
+            <KakaoCourseMap
+              className="h-full min-h-[inherit] w-full"
+              center={course.startCoordinates ?? fallbackCoordinates}
+              path={course.path}
+              places={course.places}
+              markerPoints={courseMarkerPoints}
+              onSelectPlace={(place, index) => {
+                const detail = course.placeDetails?.[index]
+                const position = detail?.lat === undefined || detail.lng === undefined
+                  ? undefined
+                  : { lat: detail.lat, lng: detail.lng }
+                window.open(
+                  kakaoPlaceUrl(place, position),
+                  "_blank",
+                  "noopener,noreferrer"
+                )
+              }}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center px-5 text-center text-gray-500">
+              {courseDetail.isPending ? "지도를 불러오고 있어요." : "코스를 찾을 수 없어요."}
+            </div>
+          )}
+          <Header
+            className="absolute inset-x-0 top-0 z-10 bg-white/90"
+            title="코스 지도"
+            onBack={() => router.push(returnPath)}
+          />
+          {course?.places.length ? (
+            <div className="absolute right-4 bottom-5 left-4 rounded-xl bg-white/95 px-4 py-3 text-center text-sm text-gray-600 shadow-sm">
+              지도에서 장소 마커를 누르면 카카오맵이 열려요.
+            </div>
+          ) : null}
+        </section>
+      </Plain>
+    )
+  }
+
   if (screen === "course-detail" && ownCourse && course) {
     const visiblePlaces = course.places
       .map((place, index) => ({ place, index }))
@@ -1795,8 +1923,15 @@ function FlowScreen({
                 center={course.startCoordinates ?? fallbackCoordinates}
                 path={course.path}
                 places={course.places}
+                markerPoints={courseMarkerPoints}
                 onSelectPlace={setSelectedPlace}
                 dark
+              />
+              <button
+                type="button"
+                className="absolute inset-x-0 top-0 z-[1] h-56"
+                aria-label="지도 전체 보기"
+                onClick={() => router.push(`/courses/${course.id}/map`)}
               />
               <Image
                 src="/img/dog_small.png"
@@ -1806,7 +1941,7 @@ function FlowScreen({
                 className="pointer-events-none absolute top-[167px] left-[10px] h-[71px] w-[88px]"
               />
               <Header
-                className="absolute inset-x-0 top-0 bg-gradient-to-b from-gray-900/70 to-transparent [&_img]:invert"
+                className="absolute inset-x-0 top-0 z-[2] bg-gradient-to-b from-gray-900/70 to-transparent [&_img]:invert"
                 title={undefined}
                 onBack={() => router.push("/courses")}
               />
@@ -2178,100 +2313,288 @@ function FlowScreen({
     )
   }
 
-  if (screen === "community-detail" && course && !ownCourse) {
+  if ((screen === "community-detail" || screen === "community-save") && !course) {
     return (
       <Plain>
-        <section className="min-h-[inherit] bg-gray-50">
-          <div className="relative h-84 overflow-hidden">
+        <Header title="커뮤니티" onBack={() => router.push("/community")} />
+        <p className="type-body-r-14 px-5 py-6 text-gray-500">
+          {courseDetail.isPending ? "코스를 불러오고 있어요." : "코스를 찾을 수 없어요."}
+        </p>
+      </Plain>
+    )
+  }
+
+  if (screen === "community-save") {
+    const canSave = Boolean(saveDate) && isValidCourseTimeRange(saveStartTime, saveEndTime)
+    const handleSave = () => {
+      if (!course || !canSave) return
+      setCourseActionError(null)
+      if (demoMode) {
+        saveCourse({ ...course, date: saveDate, startTime: saveStartTime, endTime: saveEndTime })
+        router.replace("/courses?filter=saved")
+        return
+      }
+      saveApiCourse.mutate(course.id, {
+        onSuccess: () => {
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.saved })
+          void queryClient.invalidateQueries({ queryKey: ["courses", "nearby"] })
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.detail(course.id) })
+          router.replace("/courses?filter=saved")
+        },
+        onError: (error) =>
+          setCourseActionError(error instanceof Error ? error.message : "코스를 저장하지 못했어요."),
+      })
+    }
+    return (
+      <Plain>
+        <section className="flex min-h-[inherit] flex-col bg-gray-50">
+          <Header title="코스 만들기" onBack={() => router.push(`/community/${courseId}`)} />
+          <p className="type-body-r-14 px-12 text-gray-400">
+            {user.dogName}의 체형과 나이를 고려한 코스로 생성돼요!
+          </p>
+          <div className="mt-5 space-y-5 px-5">
+            <label className="flex h-18 items-center justify-between rounded-xl bg-gray-100/40 px-5">
+              <span className="type-head-sb-18 text-gray-600">날짜</span>
+              <input
+                aria-label="저장할 코스 날짜"
+                type="date"
+                value={saveDate}
+                onChange={(event) => setSaveDate(event.target.value)}
+                className="type-body-sb-16 w-36 border-0 bg-transparent text-right text-gray-400 outline-none focus:outline-none focus:ring-0"
+              />
+            </label>
+            <section className="rounded-xl bg-gray-100/40 px-5 pb-4 pt-1">
+              <h2 className="type-head-sb-18 border-b border-gray-150 py-3 text-gray-600">시간</h2>
+              <div className="mt-3 space-y-2">
+                <label className="flex items-center justify-between">
+                  <span className="type-body-sb-14 text-gray-400">시작 시간</span>
+                  <input
+                    aria-label="저장할 코스 시작 시간"
+                    type="time"
+                    value={saveStartTime}
+                    max="22:59"
+                    onChange={(event) => {
+                      const start = event.target.value
+                      setSaveStartTime(start)
+                      if (!isValidCourseTimeRange(start, saveEndTime)) {
+                        setSaveEndTime(minimumCourseEndTime(start) ?? "")
+                      }
+                    }}
+                    className="type-body-r-14 h-10 w-27 rounded-xl border-0 bg-gray-50 px-2 text-center text-gray-600 shadow-[0_0_2px_var(--color-gray-100)] outline-none focus:outline-none focus:ring-0"
+                  />
+                </label>
+                <label className="flex items-center justify-between">
+                  <span className="type-body-sb-14 text-gray-400">종료 시간</span>
+                  <input
+                    aria-label="저장할 코스 종료 시간"
+                    type="time"
+                    value={saveEndTime}
+                    min={minimumCourseEndTime(saveStartTime) ?? undefined}
+                    disabled={!minimumCourseEndTime(saveStartTime)}
+                    onChange={(event) => setSaveEndTime(event.target.value)}
+                    className="type-body-r-14 h-10 w-27 rounded-xl border-0 bg-gray-50 px-2 text-center text-gray-600 shadow-[0_0_2px_var(--color-gray-100)] outline-none focus:outline-none focus:ring-0 disabled:opacity-50"
+                  />
+                </label>
+              </div>
+            </section>
+            {!canSave && saveStartTime && saveEndTime ? (
+              <p className="type-body-r-14 text-red-600" role="alert">
+                종료 시간은 시작 시간보다 최소 1시간 뒤여야 해요.
+              </p>
+            ) : null}
+            {courseActionError ? <p className="type-body-r-14 text-red-600" role="alert">{courseActionError}</p> : null}
+          </div>
+          <div className="mt-auto px-5 pb-6 pt-5">
+            <Button
+              size="full"
+              variant="dark"
+              className="h-14 bg-gray-600 text-[18px] hover:bg-gray-600"
+              disabled={!course || !canSave || saveApiCourse.isPending}
+              onClick={handleSave}
+            >
+              {saveApiCourse.isPending ? "저장 중" : "코스 저장하기"}
+            </Button>
+          </div>
+        </section>
+      </Plain>
+    )
+  }
+
+  if (screen === "community-detail" && course) {
+    const toggleLike = () => {
+      if (demoMode) {
+        toggleCommunityLike(course)
+        return
+      }
+      const mutation = communityLike.liked ? unlikeApiCourse : likeApiCourse
+      mutation.mutate(course.id, {
+        onSuccess: (result) => {
+          setLiveLike((previous) => ({
+            ...previous,
+            [course.id]: { liked: result.is_liked, count: result.like_count },
+          }))
+          void queryClient.invalidateQueries({ queryKey: ["courses", "nearby"] })
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.detail(course.id) })
+        },
+        onError: (error) =>
+          setCourseActionError(error instanceof Error ? error.message : "좋아요를 변경하지 못했어요."),
+      })
+    }
+    const deleteSharedCourse = async () => {
+      setCourseActionError(null)
+      try {
+        if (demoMode) {
+          removeDemoCourse(course.id)
+        } else {
+          await deleteApiCourse.mutateAsync(course.id)
+          queryClient.removeQueries({ queryKey: courseQueryKeys.detail(course.id) })
+          void queryClient.invalidateQueries({ queryKey: courseQueryKeys.mine })
+          void queryClient.invalidateQueries({ queryKey: ["courses", "nearby"] })
+        }
+        router.replace("/community")
+      } catch (error) {
+        setCourseActionError(error instanceof Error ? error.message : "코스를 삭제하지 못했어요.")
+      }
+    }
+    const shareLink = async () => {
+      setCourseMenuOpen(false)
+      const url = `${window.location.origin}/community/${course.id}`
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: course.title, url })
+        } else {
+          await navigator.clipboard.writeText(url)
+          setCourseToast("코스 링크를 복사했어요")
+        }
+      } catch {
+        setCourseActionError("공유 링크를 복사하지 못했어요.")
+      }
+    }
+    return (
+      <Plain>
+        <section className="flex min-h-[inherit] flex-col bg-gray-50">
+          <div className="relative h-84 shrink-0 overflow-hidden">
             <KakaoCourseMap
               className="size-full"
               center={course.startCoordinates ?? fallbackCoordinates}
               path={course.path}
               places={course.places}
+              markerPoints={courseMarkerPoints}
               onSelectPlace={setSelectedPlace}
             />
-            <Header
-              className="absolute inset-x-0 top-0 bg-gradient-to-b from-white/70 to-transparent"
-              title={undefined}
-              onBack={() => router.back()}
+            <button
+              type="button"
+              className="absolute inset-x-0 top-0 z-[1] h-56"
+              aria-label="지도 전체 보기"
+              onClick={() => router.push(`/community/${course.id}/map`)}
             />
+            <Header
+              className="absolute inset-x-0 top-0 z-[2] bg-gradient-to-b from-white/80 to-transparent"
+              title={undefined}
+              onBack={() => router.push("/community")}
+            />
+            {ownCourse ? (
+              <span className="type-body-r-13 absolute bottom-32 left-5 z-[2] rounded-full bg-gray-900/75 px-3 py-1 text-white">
+                내가 만든 코스
+              </span>
+            ) : null}
           </div>
-          <section className="relative -mt-28 min-h-[calc(100svh-14rem)] rounded-t-2xl bg-gray-50 px-5 py-6">
+          <section className="relative -mt-28 flex flex-1 flex-col rounded-t-2xl bg-gray-50 px-5 pt-6 pb-6">
             <div className="flex items-start justify-between gap-3">
-              <div className="space-y-3">
-                <h1 className="type-head-sb-24 text-gray-800">
-                  {course.title}
-                </h1>
-                <div className="type-body-r-14 flex items-center gap-2 text-gray-500">
-                  <span className="rounded-full bg-red-600 px-2 py-1 text-red-50">
-                    + 11
-                  </span>
-                  명이 발자국을 남겼어요!
-                </div>
+              <div className="min-w-0 flex-1 space-y-4">
+                <h1 className="type-head-sb-22 text-gray-800">{course.title}</h1>
+                {communityLike.count > 0 ? (
+                  <PawActivity count={communityLike.count} />
+                ) : (
+                  <p className="type-body-r-14 text-gray-500">아직 발자국을 남긴 친구가 없어요</p>
+                )}
               </div>
-              <LikeButton
-                aria-label="코스 좋아요"
-                pressed={liked}
-                onClick={() => setLiked((value) => !value)}
-              />
+              {ownCourse ? (
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    aria-label="코스 메뉴"
+                    aria-haspopup="menu"
+                    aria-expanded={courseMenuOpen}
+                    className="flex size-6 items-center justify-center"
+                    onClick={() => setCourseMenuOpen((open) => !open)}
+                  >
+                    <Icon name="more" className="size-6" />
+                  </button>
+                  {courseMenuOpen ? (
+                    <>
+                      <button type="button" aria-label="코스 메뉴 닫기" className="fixed inset-0 z-20" onClick={() => setCourseMenuOpen(false)} />
+                      <div role="menu" aria-label="코스 관리" className="absolute right-0 top-8 z-30 flex min-w-24 flex-col gap-2 rounded-lg bg-gray-50 px-4 py-2 text-right shadow-[0_0_5px_rgba(201,198,198,0.6)]">
+                        <button type="button" role="menuitem" className="type-body-r-16 whitespace-nowrap text-gray-500" onClick={() => void shareLink()}>공유하기</button>
+                        <button type="button" role="menuitem" className="type-body-r-16 whitespace-nowrap text-gray-500" onClick={() => router.push(`/courses/${course.id}?edit=1`)}>수정하기</button>
+                        <button type="button" role="menuitem" className="type-body-r-16 whitespace-nowrap text-red-600" onClick={() => { setCourseMenuOpen(false); setPendingCourseDeletion(true) }}>삭제하기</button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              ) : (
+                <span
+                  role="img"
+                  aria-label={isCourseSaved ? "저장한 코스" : "저장하지 않은 코스"}
+                  className={`size-6 shrink-0 ${isCourseSaved ? "bg-red-800" : "bg-gray-150"}`}
+                  style={{ mask: `url(${iconSources[isCourseSaved ? "bookmarkFill" : "bookmarkLine"]}) center / contain no-repeat` }}
+                />
+              )}
             </div>
-            <section aria-label="코스 스팟" className="mt-6 space-y-0">
+            <section aria-label="코스 스팟" className="mt-6">
               {course.places.map((place, index) => (
                 <TimelineSpot
-                  key={`${course.id}-${place}`}
+                  key={`${course.id}-${index}`}
                   title={place}
-                  time={formatCourseSpotTime(course.startTime, index)}
-                  chip={index % 2 ? "카페" : "식당"}
+                  time={course.placeDetails?.[index]?.visitTime
+                    ? formatVisitTime(course.placeDetails[index].visitTime)
+                    : formatCourseSpotTime(course.startTime, index)}
+                  chip={course.placeDetails?.[index]
+                    ? formatPlaceCategory(course.placeDetails[index].category)
+                    : "장소"}
                   variant="light-default"
                 />
               ))}
-              {course.summaryOnly ? (
-                <TimelineSpot variant="light-empty" chip="산책" />
+              {!course.places.length ? (
+                <p className="type-body-r-14 py-5 text-gray-400">
+                  {courseDetail.isPending ? "장소를 불러오고 있어요." : "등록된 장소가 없어요."}
+                </p>
               ) : null}
             </section>
-            <div className="mt-5 flex items-center gap-3">
-              <LikeButton
-                aria-label="코스 좋아요"
-                pressed={liked}
-                onClick={() => setLiked((value) => !value)}
-              />
-              <Button
-                size="full"
-                variant={saved || course.saved ? "secondary" : "primary"}
-                onClick={() => {
-                  if (demoMode) {
-                    saveCourse(course)
-                    setSaved(true)
-                    return
-                  }
-                  saveApiCourse.mutate(course.id, {
-                    onSuccess: () => {
-                      setSaved(true)
-                      queryClient.invalidateQueries({
-                        queryKey: courseQueryKeys.saved,
-                      })
-                    },
-                  })
-                }}
-              >
-                {saveApiCourse.isPending
-                  ? "저장 중"
-                  : saved || course.saved
-                    ? "내 코스에 저장됨"
-                    : "내 코스에 저장"}
-              </Button>
-            </div>
-            {saved || course.saved ? (
-              <Button
-                size="full"
-                variant="text"
-                className="mt-2"
-                onClick={() => router.push("/courses")}
-              >
-                저장한 코스 확인하기
-              </Button>
+            {courseActionError ? <p role="alert" className="type-body-r-14 mt-3 text-red-600">{courseActionError}</p> : null}
+            {courseToast ? <p role="status" className="type-body-r-14 mt-3 text-gray-500">{courseToast}</p> : null}
+            {!ownCourse ? (
+              <div className="mt-auto flex items-center gap-3 pt-6">
+                <LikeButton
+                  aria-label="코스 좋아요"
+                  pressed={communityLike.liked}
+                  disabled={likeApiCourse.isPending || unlikeApiCourse.isPending}
+                  onClick={toggleLike}
+                />
+                <Button
+                  size="full"
+                  variant="dark"
+                  className="h-[54px] flex-1 bg-gray-600 text-[18px] hover:bg-gray-600"
+                  onClick={() => router.push(isCourseSaved ? "/courses?filter=saved" : `/community/${course.id}/save`)}
+                >
+                  {isCourseSaved ? "저장한 코스 보기" : "내 코스로 저장"}
+                </Button>
+              </div>
             ) : null}
           </section>
+          {pendingCourseDeletion ? (
+            <div className="layout-mobile-overlay z-40 flex items-center justify-center bg-black/60 px-5" role="dialog" aria-modal="true" aria-label="코스 삭제 확인">
+              <section className="w-full rounded-2xl bg-white p-5 text-center">
+                <h2 className="type-head-sb-22 text-gray-900">코스를 삭제할까요?</h2>
+                <p className="type-body-r-14 mt-2 text-gray-500">삭제한 코스는 다시 되돌릴 수 없어요.</p>
+                {courseActionError ? <p role="alert" className="type-body-r-14 mt-2 text-red-600">{courseActionError}</p> : null}
+                <div className="mt-6 grid grid-cols-2 gap-2">
+                  <Button variant="secondary" size="lg" className="px-3" onClick={() => setPendingCourseDeletion(false)}>유지하기</Button>
+                  <Button size="lg" className="px-3" disabled={deleteApiCourse.isPending} onClick={() => void deleteSharedCourse()}>삭제하기</Button>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </section>
       </Plain>
     )
@@ -2279,7 +2602,6 @@ function FlowScreen({
 
   if (
     screen === "course-detail" ||
-    screen === "community-detail" ||
     screen === "archive-detail"
   ) {
     if (!course)
@@ -2303,10 +2625,19 @@ function FlowScreen({
             center={course.startCoordinates ?? fallbackCoordinates}
             path={course.path}
             places={course.places}
+            markerPoints={courseMarkerPoints}
             onSelectPlace={setSelectedPlace}
           />
+          {screen === "course-detail" ? (
+            <button
+              type="button"
+              className="absolute inset-x-0 top-0 z-[1] h-56"
+              aria-label="지도 전체 보기"
+              onClick={() => router.push(`/courses/${course.id}/map`)}
+            />
+          ) : null}
           <Header
-            className="absolute inset-x-0 top-0 bg-gradient-to-b from-gray-900/80 to-transparent text-white [&_svg]:text-white"
+            className="absolute inset-x-0 top-0 z-[2] bg-gradient-to-b from-gray-900/80 to-transparent text-white [&_svg]:text-white"
             title={undefined}
             onBack={() => router.back()}
             trailing={
@@ -2461,99 +2792,81 @@ function FlowScreen({
               내 코스 목록 보기
             </Button>
           ) : null}
-          {screen === "community-detail" && !ownCourse ? (
-            <div className="space-y-2">
-              <Button
-                size="full"
-                variant={saved ? "secondary" : "primary"}
-                onClick={() => {
-                  if (demoMode) {
-                    saveCourse(course)
-                    setSaved(true)
-                    return
-                  }
-
-                  saveApiCourse.mutate(course.id, {
-                    onSuccess: () => {
-                      setSaved(true)
-                      queryClient.invalidateQueries({
-                        queryKey: courseQueryKeys.saved,
-                      })
-                    },
-                  })
-                }}
-              >
-                {saveApiCourse.isPending
-                  ? "저장 중"
-                  : saved || course.saved
-                    ? "내 코스에 저장됨"
-                    : "내 코스에 저장"}
-              </Button>
-              {saved || course.saved ? (
-                <Button
-                  size="full"
-                  variant="text"
-                  onClick={() => router.push("/courses")}
-                >
-                  저장한 코스 확인하기
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
         </section>
       </Plain>
     )
   }
 
-  if (screen === "community")
+  if (screen === "community") {
+    const sharedCourses = demoMode
+      ? dedupeCourses([
+          ...courses.filter((item) => item.shared),
+          ...communityCourses.filter((item) => !removedCommunityCourseIds.includes(item.id)),
+        ])
+      : serverRecommendations
+    const visibleCourses = sharedCourses.filter(
+      (item) => communityFilter === "전체" || !item.dogSize || item.dogSize === communityFilter
+    )
     return (
       <AppShell tab="community">
-        <Header title="커뮤니티" />
-        <section className="space-y-9 px-5 pb-5 pt-0">
-          <>
-              <div
-                className="flex gap-2"
-                role="group"
-                aria-label="반려견 크기 필터"
+        <Header title="커뮤니티" className="h-[60px] px-4 [&_h1]:text-xl" />
+        <section className="flex min-h-[calc(100%-60px)] flex-col px-5 pb-5">
+          <div className="flex gap-2 py-2" role="group" aria-label="반려견 크기 필터">
+            {(["전체", "대형", "중형", "소형"] as const).map((filter) => (
+              <Chip
+                key={filter}
+                variant="light"
+                className={`h-8 rounded-full px-3 text-[16px] font-normal ${communityFilter === filter ? "bg-gray-900 text-white" : "bg-gray-50 text-gray-200"}`}
+                onClick={() => setCommunityFilter(filter)}
+                aria-pressed={communityFilter === filter}
               >
-                {(["전체", "대형", "중형", "소형"] as const).map((filter) => (
-                  <Chip
-                    key={filter}
-                    variant={communityFilter === filter ? "selected" : "light"}
-                    onClick={() => setCommunityFilter(filter)}
-                    aria-pressed={communityFilter === filter}
-                  >
-                    {filter}
-                  </Chip>
-                ))}
-              </div>
-              {(demoMode ? communityCourses : serverRecommendations)
-                .filter(
-                  (item) =>
-                    !demoMode ||
-                    communityFilter === "전체" ||
-                    ("dogSize" in item && item.dogSize === communityFilter)
-                )
-                .map((item) => (
+                {filter}
+              </Chip>
+            ))}
+          </div>
+          {!demoMode && nearbyCourses.isPending ? (
+            <p className="type-body-r-14 mt-9 text-gray-400">공유된 코스를 불러오고 있어요.</p>
+          ) : !demoMode && nearbyCourses.isError ? (
+            <div className="mt-9 space-y-3">
+              <p className="type-body-r-14 text-gray-400">공유된 코스를 불러오지 못했어요.</p>
+              <Button variant="secondary" size="sm" onClick={() => void nearbyCourses.refetch()}>다시 불러오기</Button>
+            </div>
+          ) : visibleCourses.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center pb-16">
+              <EmptyState
+                title="아직 등록된 코스가 없어요"
+                description="내 코스를 등록해볼까요?"
+              />
+            </div>
+          ) : (
+            <div className="mt-5 space-y-4">
+              {visibleCourses.map((item) => {
+                const isSaved = item.userId === user.id || item.saved || courses.some((savedCourse) => savedCourse.id === item.id && savedCourse.saved)
+                return (
                   <button
                     key={item.id}
+                    type="button"
                     className="w-full text-left"
                     onClick={() => router.push(`/community/${item.id}`)}
                   >
                     <CourseCard
+                      className="max-w-none"
                       title={item.title}
-                      hours={item.duration / 60}
-                      spots={item.places.length}
-                      variant={
-                        item.userId === user.id ? "community-y" : "community-n"
-                      }
+                      hours={Math.round(item.duration / 60 * 10) / 10}
+                      spots={item.placeCount ?? item.places.length}
+                      activityCount={communityLikes[item.id]?.count ?? item.likeCount ?? 0}
+                      saved={Boolean(isSaved)}
+                      variant={item.userId === user.id ? "community-y" : "community-n"}
                     />
                   </button>
-                ))}
-          </>
+                )
+              })}
+            </div>
+          )}
         </section>
       </AppShell>
     )
+  }
 
   if (screen === "archive")
     return (
@@ -2651,43 +2964,46 @@ function FlowScreen({
   if (screen === "mypage")
     return (
       <AppShell tab="mypage">
-        <section className="space-y-5 bg-gray-50 px-5 pb-6 pt-12">
-          <div className="flex flex-col items-center">
+        <section className="min-h-full bg-gray-50 pb-6">
+          <header className="flex h-[60px] items-center px-4">
+            <h1 className="type-head-sb-20 text-gray-900">마이페이지</h1>
+          </header>
+          <div className="flex flex-col items-center px-5">
             <Image
               src={profileImageSrc}
               alt={`${user.dogName} 프로필`}
-              width={132}
-              height={132}
+              width={100}
+              height={100}
               unoptimized={profileImageSrc.startsWith("http")}
-              className="size-[132px] rounded-full object-cover"
+              className="size-[100px] rounded-[40px] object-cover"
             />
-            <div className="mt-3 flex items-center gap-2">
-              <h1 className="type-head-sb-20">{user.dogName}</h1>
+            <div className="mt-3 flex items-center gap-[7px]">
+              <h2 className="type-head-sb-20 text-gray-900">{user.dogName}</h2>
               <Button
                 size="sm"
                 variant="secondary"
-                className="h-7 rounded-full px-3"
+                className="h-[26px] rounded-full border border-gray-100 bg-white px-3 text-gray-900"
                 onClick={() => router.push("/mypage/edit")}
               >
                 수정
               </Button>
             </div>
           </div>
-          <dl className="grid grid-cols-3 rounded-2xl border border-gray-800 bg-gray-500 px-5 py-3 text-center">
-            <div className="space-y-1">
-              <dt className="type-body-sb-14 text-gray-50">몸무게</dt>
-              <dd className="type-body-r-16 text-gray-200">10kg 이하</dd>
-            </div>
-            <div className="space-y-1 border-x border-gray-600">
-              <dt className="type-body-sb-14 text-gray-50">나이</dt>
-              <dd className="type-body-r-16 text-gray-200">{user.age}</dd>
-            </div>
-            <div className="space-y-1">
-              <dt className="type-body-sb-14 text-gray-50">견종</dt>
-              <dd className="type-body-r-16 text-gray-200">{activeDogSizeLabel}</dd>
-            </div>
-          </dl>
-          <div className="space-y-3">
+          <div className="space-y-5 px-5">
+            <dl className="mt-5 grid grid-cols-3 rounded-2xl border border-gray-800 bg-gray-500 px-4 py-3 text-center">
+              <div className="space-y-1">
+                <dt className="type-body-sb-14 text-gray-50">몸무게</dt>
+                <dd className="type-body-r-16 text-gray-200">10kg이하</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className="type-body-sb-14 text-gray-50">나이</dt>
+                <dd className="type-body-r-16 text-gray-200">{user.age.replace(/살$/, "세")}</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className="type-body-sb-14 text-gray-50">견종</dt>
+                <dd className="type-body-r-16 text-gray-200">{activeDogSizeLabel}</dd>
+              </div>
+            </dl>
             <section className="rounded-xl bg-white px-5 py-3">
               <h2 className="type-body-sb-16 border-b border-gray-100 py-2">설정</h2>
               <ListRow label="이용약관" onClick={() => router.push("/terms/service")} />
@@ -2702,17 +3018,7 @@ function FlowScreen({
                   router.replace("/login")
                 }}
               />
-              <ListRow label="탈퇴" onClick={() => router.push("/error-demo")} />
             </section>
-          </div>
-          <p className="type-caption-r-12 px-1 text-gray-400">
-            보호자 {user.name}
-          </p>
-          <div className="sr-only">
-            <ListRow
-              label="오류 화면 보기"
-              onClick={() => router.push("/error-demo")}
-            />
           </div>
         </section>
       </AppShell>
@@ -2979,6 +3285,8 @@ function HomePlaceCard({
   companionLabel,
   pawCount,
   imageUrl,
+  lat,
+  lng,
 }: {
   title: string
   category: string
@@ -2986,9 +3294,17 @@ function HomePlaceCard({
   companionLabel: string
   pawCount: number
   imageUrl: string
+  lat?: number
+  lng?: number
 }) {
   return (
-    <article className="flex min-h-[104px] items-center justify-between gap-3 rounded-[20px] border border-gray-100 bg-gray-50/50 px-4 py-3">
+    <a
+      href={kakaoPlaceUrl(title, lat === undefined || lng === undefined ? undefined : { lat, lng })}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${title} 카카오맵에서 보기`}
+      className="flex min-h-[104px] items-center justify-between gap-3 rounded-[20px] border border-gray-100 bg-gray-50/50 px-4 py-3"
+    >
       <div className="min-w-0 flex-1">
         <h3 className="type-body-sb-16 truncate text-gray-600">{title}</h3>
         <div className="mt-3 flex flex-col gap-1">
@@ -3014,7 +3330,7 @@ function HomePlaceCard({
         unoptimized
         className="size-19 shrink-0 rounded-xl object-cover"
       />
-    </article>
+    </a>
   )
 }
 
@@ -3065,7 +3381,8 @@ function TermRow({
 function findCourse(
   id: string | undefined,
   courses: Course[],
-  includeDemoCourses: boolean
+  includeDemoCourses: boolean,
+  removedCommunityCourseIds: string[] = []
 ) {
   if (includeDemoCourses && id === "edge-case")
     return {
@@ -3079,7 +3396,9 @@ function findCourse(
   return (
     courses.find((item) => item.id === id) ??
     (includeDemoCourses
-      ? communityCourses.find((item) => item.id === id)
+      ? communityCourses.find(
+          (item) => item.id === id && !removedCommunityCourseIds.includes(item.id)
+        )
       : undefined)
   )
 }

@@ -2,9 +2,17 @@ export type Course = {
   id: string
   userId: string
   title: string
+  createdAt?: string
   duration: number
   places: string[]
-  placeDetails?: { category: string; visitTime?: string | null }[]
+  placeDetails?: {
+    category: string
+    visitTime?: string | null
+    lat?: number
+    lng?: number
+  }[]
+  likeCount?: number
+  liked?: boolean
   saved?: boolean
   shared?: boolean
   edge?: boolean
@@ -296,16 +304,21 @@ export const communityCourses: Course[] = [
     id: "seoul-forest",
     userId: "mango",
     title: "서울숲 반려견 산책 코스",
+    createdAt: "2026.08.19",
     duration: 90,
     places: ["서울숲", "댕댕이 카페", "성수 산책길"],
     dogSize: "소형",
+    likeCount: 5,
   },
   {
     id: "zero-weekend",
     userId: "zero",
     title: "제로의 주말 한강 코스",
+    createdAt: "2026.08.19",
     duration: 120,
     places: ["망원 한강공원", "반려견 놀이터", "망원시장"],
     dogSize: "중형",
+    likeCount: 11,
+    shared: true,
   },
 ]

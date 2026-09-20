@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react"
 
 import { Chip, PawActivity, PawCount } from "@workspace/ui/components/chip"
-import { Icon } from "@workspace/ui/components/icon"
+import { Icon, iconSources } from "@workspace/ui/components/icon"
 import { cn } from "@workspace/ui/lib/utils"
 
 type ListRowProps = ComponentProps<"button"> & {
@@ -156,6 +156,7 @@ type CourseCardProps = {
   variant?: "course" | "community-y" | "community-n"
   createdAt?: string
   activityCount?: number
+  saved?: boolean
   className?: string
 }
 function CourseCard({
@@ -163,8 +164,9 @@ function CourseCard({
   hours,
   spots,
   variant = "course",
-  createdAt = "2026.08.19",
+  createdAt,
   activityCount = 11,
+  saved = false,
   className,
 }: CourseCardProps) {
   return (
@@ -175,9 +177,9 @@ function CourseCard({
         className
       )}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <h3 className="type-head-sb-18 text-gray-900">{title}</h3>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 space-y-1">
+          <h3 className="type-head-sb-18 truncate text-gray-900">{title}</h3>
           <div className="type-body-r-13 flex items-center gap-3 text-gray-400">
             <span>
               산책시간{" "}
@@ -194,16 +196,34 @@ function CourseCard({
             </span>
           </div>
         </div>
-        <Icon name="bookmarkFill" className="size-6" />
+        {variant === "course" ? (
+          <span
+            aria-label="내 코스에 저장됨"
+            className="size-6 shrink-0 bg-red-800"
+            style={{
+              mask: `url(${iconSources.bookmarkFill}) center / contain no-repeat`,
+            }}
+          />
+        ) : (
+          <span
+            aria-label={saved ? "저장한 코스" : "저장하지 않은 코스"}
+            className={cn("size-6 shrink-0", saved ? "bg-red-800" : "bg-gray-150")}
+            style={{
+              mask: `url(${iconSources[saved ? "bookmarkFill" : "bookmarkLine"]}) center / contain no-repeat`,
+            }}
+          />
+        )}
       </div>
       {variant === "course" ? (
         <div className="type-body-r-13 flex items-center gap-2 text-gray-200">
           <Icon name="bone" className="size-5.5" />
-          생성일 {createdAt}
+          생성일 {createdAt ?? "—"}
         </div>
       ) : null}
-      {variant === "community-y" ? <PawActivity count={activityCount} /> : null}
-      {variant === "community-n" ? (
+      {variant !== "course" && activityCount > 0 ? (
+        <PawActivity count={activityCount} />
+      ) : null}
+      {variant !== "course" && activityCount === 0 ? (
         <div className="type-body-r-14 flex items-center gap-2 text-gray-500">
           <Icon name="bone" className="size-5.5" />
           아직 발자국을 남긴 친구가 없어요

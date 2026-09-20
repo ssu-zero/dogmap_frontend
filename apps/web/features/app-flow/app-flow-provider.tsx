@@ -31,12 +31,15 @@ type AppFlowState = {
   coordinates: { lat: number; lng: number }
   courseStartCoordinates: { lat: number; lng: number } | null
   diaries: Record<string, string>
+  communityLikes: Record<string, { liked: boolean; count: number }>
+  removedCommunityCourseIds: string[]
   updateUser: (updates: Partial<typeof currentUser>) => void
   createCourse: (draft: CourseDraft) => Course
   addCourse: (course: Course) => void
   updateCourse: (courseId: string, updates: Partial<Course>) => void
   removeCourse: (courseId: string) => void
   saveCourse: (course: Course) => void
+  toggleCommunityLike: (course: Course) => void
   setTerm: (term: RequiredTermKey, value: boolean) => void
   setAllTerms: (value: boolean) => void
   updateOnboarding: (updates: Partial<OnboardingProfile>) => void
@@ -71,6 +74,10 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
     lng: number
   } | null>(null)
   const [diaries, setDiaries] = useState<Record<string, string>>({})
+  const [communityLikes, setCommunityLikes] = useState<
+    Record<string, { liked: boolean; count: number }>
+  >({})
+  const [removedCommunityCourseIds, setRemovedCommunityCourseIds] = useState<string[]>([])
 
   const value = useMemo<AppFlowState>(
     () => ({
@@ -84,6 +91,8 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       coordinates,
       courseStartCoordinates,
       diaries,
+      communityLikes,
+      removedCommunityCourseIds,
       updateUser: (updates) =>
         setUser((previous) => ({ ...previous, ...updates })),
       createCourse: (draft) => {
@@ -91,6 +100,12 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
           id: `generated-${Date.now()}`,
           userId: user.id,
           title: draft.title.trim() || `${user.dogName}와 함께하는 산책`,
+          createdAt: new Intl.DateTimeFormat("sv-SE", {
+            timeZone: "Asia/Seoul",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(new Date()).replaceAll("-", "."),
           duration: draft.duration ?? 90,
           places: [
             draft.startLocation.trim(),
@@ -119,16 +134,44 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
             course.id === courseId ? { ...course, ...updates } : course
           )
         ),
-      removeCourse: (courseId) =>
+      removeCourse: (courseId) => {
         setCourses((previous) =>
           previous.filter((course) => course.id !== courseId)
-        ),
+        )
+        setRemovedCommunityCourseIds((previous) =>
+          previous.includes(courseId) ? previous : [...previous, courseId]
+        )
+      },
       saveCourse: (course) =>
         setCourses((previous) =>
           previous.some((item) => item.id === course.id)
-            ? previous
+            ? previous.map((item) =>
+                item.id === course.id
+                  ? {
+                      ...item,
+                      saved: true,
+                      date: course.date,
+                      startTime: course.startTime,
+                      endTime: course.endTime,
+                    }
+                  : item
+              )
             : [{ ...course, saved: true }, ...previous]
         ),
+      toggleCommunityLike: (course) =>
+        setCommunityLikes((previous) => {
+          const current = previous[course.id] ?? {
+            liked: course.liked ?? false,
+            count: course.likeCount ?? 0,
+          }
+          return {
+            ...previous,
+            [course.id]: {
+              liked: !current.liked,
+              count: Math.max(0, current.count + (current.liked ? -1 : 1)),
+            },
+          }
+        }),
       setTerm: (term, value) =>
         setTerms((previous) => ({ ...previous, [term]: value })),
       setAllTerms: (value) =>
@@ -156,6 +199,8 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       coordinates,
       courseStartCoordinates,
       diaries,
+      communityLikes,
+      removedCommunityCourseIds,
       courses,
       locationPermissionPromptOpen,
       onboarding,

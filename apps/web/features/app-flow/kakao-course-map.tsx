@@ -11,7 +11,8 @@ type KakaoMapProps = {
   center: Coordinates
   path?: [number, number][]
   places: string[]
-  onSelectPlace: (place: string) => void
+  markerPoints?: Coordinates[]
+  onSelectPlace: (place: string, index: number, coordinates: Coordinates) => void
   className?: string
   dark?: boolean
 }
@@ -238,6 +239,7 @@ export function KakaoCourseMap({
   center,
   path = [],
   places,
+  markerPoints,
   onSelectPlace,
   className,
   dark = false,
@@ -247,8 +249,11 @@ export function KakaoCourseMap({
   const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY
   const { maps, loadError, retry } = useKakaoMaps(appKey)
   const markerCoordinates = useMemo(
-    () => createMarkerCoordinates(center, path, places.length),
-    [center, path, places.length]
+    () =>
+      markerPoints?.length === places.length
+        ? markerPoints
+        : createMarkerCoordinates(center, path, places.length),
+    [center, path, places.length, markerPoints]
   )
 
   useEffect(() => {
@@ -287,7 +292,7 @@ export function KakaoCourseMap({
       bounds.extend(position)
       maps.event.addListener(marker, "click", () => {
         const place = places[index]
-        if (place) onSelectPlaceRef.current(place)
+        if (place) onSelectPlaceRef.current(place, index, coordinates)
       })
     })
 

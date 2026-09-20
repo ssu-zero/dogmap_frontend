@@ -7,10 +7,12 @@ import {
   getMyCourses,
   getNearbyCourses,
   getSavedCourses,
+  likeCourse,
   replaceCoursePlaces,
   saveCourse,
   shareCourse,
   unsaveCourse,
+  unlikeCourse,
   updateCourseTitle,
 } from "@/api/course"
 import type { NearbyCoursesParams } from "@/schema/course"
@@ -82,6 +84,18 @@ export const unsaveCourseMutationOptions = () =>
   mutationOptions({
     mutationKey: ["courses", "unsave"],
     mutationFn: unsaveCourse,
+  })
+
+export const likeCourseMutationOptions = () =>
+  mutationOptions({
+    mutationKey: ["courses", "like"],
+    mutationFn: likeCourse,
+  })
+
+export const unlikeCourseMutationOptions = () =>
+  mutationOptions({
+    mutationKey: ["courses", "unlike"],
+    mutationFn: unlikeCourse,
   })
 
 export const replaceCoursePlacesMutationOptions = () =>

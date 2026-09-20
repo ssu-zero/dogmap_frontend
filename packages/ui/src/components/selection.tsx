@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { Icon } from "@workspace/ui/components/icon"
+import { Icon, iconSources } from "@workspace/ui/components/icon"
 import { cn } from "@workspace/ui/lib/utils"
 
 const choiceVariants = cva(
@@ -120,7 +120,13 @@ function LikeButton({
       )}
       {...props}
     >
-      <Icon name="pawFill" className="size-7" />
+      <span
+        aria-hidden="true"
+        className={cn("size-7", pressed ? "bg-red-600" : "bg-gray-150")}
+        style={{
+          mask: `url(${iconSources.pawFill}) center / contain no-repeat`,
+        }}
+      />
     </button>
   )
 }
