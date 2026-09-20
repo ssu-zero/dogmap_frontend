@@ -18,7 +18,7 @@ import {
   TimelineSpot,
 } from "@workspace/ui/components/list"
 import { Loading, LoadingSteps } from "@workspace/ui/components/loading"
-import { ChoiceButton } from "@workspace/ui/components/selection"
+import { ChoiceButton, LikeButton } from "@workspace/ui/components/selection"
 import { TextField } from "@workspace/ui/components/text-field"
 import Image from "next/image"
 import Link from "next/link"
@@ -221,6 +221,7 @@ function FlowScreen({
       (screen === "archive" || screen === "archive-detail" || screen === "report"),
   })
   const [saved, setSaved] = useState(false)
+  const [liked, setLiked] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null)
   const [courseEditing, setCourseEditing] = useState(false)
@@ -1623,6 +1624,103 @@ function FlowScreen({
               </section>
             </div>
           ) : null}
+        </section>
+      </Plain>
+    )
+  }
+
+  if (screen === "community-detail" && course && !ownCourse) {
+    return (
+      <Plain>
+        <section className="min-h-[inherit] bg-gray-50">
+          <div className="relative h-84 overflow-hidden">
+            <KakaoCourseMap
+              className="size-full"
+              center={course.startCoordinates ?? fallbackCoordinates}
+              path={course.path}
+              places={course.places}
+              onSelectPlace={setSelectedPlace}
+            />
+            <Header
+              className="absolute inset-x-0 top-0 bg-gradient-to-b from-white/70 to-transparent"
+              title={undefined}
+              onBack={() => router.back()}
+            />
+          </div>
+          <section className="relative -mt-28 min-h-[calc(100svh-14rem)] rounded-t-2xl bg-gray-50 px-5 py-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-3">
+                <h1 className="type-head-sb-24 text-gray-800">{course.title}</h1>
+                <div className="type-body-r-14 flex items-center gap-2 text-gray-500">
+                  <span className="rounded-full bg-red-600 px-2 py-1 text-red-50">
+                    + 11
+                  </span>
+                  명이 발자국을 남겼어요!
+                </div>
+              </div>
+              <LikeButton
+                aria-label="코스 좋아요"
+                pressed={liked}
+                onClick={() => setLiked((value) => !value)}
+              />
+            </div>
+            <section aria-label="코스 스팟" className="mt-6 space-y-0">
+              {course.places.map((place, index) => (
+                <TimelineSpot
+                  key={`${course.id}-${place}`}
+                  title={place}
+                  time={formatCourseSpotTime(course.startTime, index)}
+                  chip={index % 2 ? "카페" : "식당"}
+                  variant="light-default"
+                />
+              ))}
+              {course.summaryOnly ? (
+                <TimelineSpot variant="light-empty" chip="산책" />
+              ) : null}
+            </section>
+            <div className="mt-5 flex items-center gap-3">
+              <LikeButton
+                aria-label="코스 좋아요"
+                pressed={liked}
+                onClick={() => setLiked((value) => !value)}
+              />
+              <Button
+                size="full"
+                variant={saved || course.saved ? "secondary" : "primary"}
+                onClick={() => {
+                  if (demoMode) {
+                    saveCourse(course)
+                    setSaved(true)
+                    return
+                  }
+                  saveApiCourse.mutate(course.id, {
+                    onSuccess: () => {
+                      setSaved(true)
+                      queryClient.invalidateQueries({
+                        queryKey: courseQueryKeys.saved,
+                      })
+                    },
+                  })
+                }}
+              >
+                {saveApiCourse.isPending
+                  ? "저장 중"
+                  : saved || course.saved
+                    ? "내 코스에 저장됨"
+                    : "내 코스에 저장"}
+              </Button>
+            </div>
+            {saved || course.saved ? (
+              <Button
+                size="full"
+                variant="text"
+                className="mt-2"
+                onClick={() => router.push("/courses")}
+              >
+                저장한 코스 확인하기
+              </Button>
+            ) : null}
+          </section>
         </section>
       </Plain>
     )
