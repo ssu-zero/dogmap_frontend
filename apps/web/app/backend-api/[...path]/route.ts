@@ -19,7 +19,11 @@ async function proxy(request: Request, { params }: RouteContext) {
         request.method === "GET" || request.method === "HEAD"
           ? undefined
           : await request.arrayBuffer(),
-      redirect: "manual",
+      // api.dogmap.store can canonicalize an upstream URL with HTTP 308.
+      // Following it inside the server-side proxy preserves a POST request and
+      // prevents Ky in the browser from treating the intermediate redirect as
+      // a failed login response.
+      redirect: "follow",
     })
 
     return new Response(response.body, {
