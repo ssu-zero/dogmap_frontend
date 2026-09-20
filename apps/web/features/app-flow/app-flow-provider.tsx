@@ -81,12 +81,14 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
         const course: Course = {
           id: `generated-${Date.now()}`,
           userId: user.id,
-          title: draft.title.trim(),
+          title: draft.title.trim() || `${user.dogName}와 함께하는 산책`,
           duration: draft.duration ?? 90,
           places: [
             draft.startLocation.trim(),
-            ...(draft.themes.includes("카페") ? ["반려견 동반 카페"] : []),
-            ...(draft.themes.includes("활동") ? ["반려견 놀이터"] : []),
+            ...(draft.themes.includes("카페")
+              ? ["반려견 동반 카페"]
+              : []),
+            ...(draft.themes.includes("액티비티") ? ["반려견 놀이터"] : []),
             "휴식 스팟",
           ],
           date: draft.date,

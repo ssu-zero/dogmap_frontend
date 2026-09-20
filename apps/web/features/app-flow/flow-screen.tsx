@@ -68,7 +68,6 @@ import { useAppFlow } from "./app-flow-provider"
 import { fallbackCoordinates, KakaoCourseMap } from "./kakao-course-map"
 import {
   communityCourses,
-  courseDurations,
   courseThemes,
   isDogInfoComplete,
   isDogNameValid,
@@ -1223,143 +1222,150 @@ function FlowScreen({
   if (screen === "new-course")
     return (
       <Plain>
-        <Header title="코스 만들기" onBack={() => router.back()} />
         <form
-          className="flex min-h-[calc(100svh-3.75rem)] flex-col space-y-5 bg-gray-50 px-5 pb-6 pt-3"
+          className="relative flex h-full min-h-full flex-col overflow-hidden bg-gray-50 pb-22"
           onSubmit={(event) => {
             event.preventDefault()
-            if (!isCourseDraftComplete(courseDraft)) return
+            const draftToCreate = {
+              ...courseDraft,
+              title:
+                courseDraft.title.trim() || `${user.dogName}와 함께하는 산책`,
+              duration: courseDraft.duration ?? 90,
+            }
+            if (!isCourseDraftComplete(draftToCreate)) return
+            updateCourseDraft(draftToCreate)
             router.push("/courses/generating")
           }}
         >
-          <div className="px-7 pb-1">
-            <p className="type-body-r-14 text-gray-400">
+          <div className="space-y-2.5">
+            <Header title="코스 만들기" onBack={() => router.back()} />
+            <p className="type-body-r-14 px-12 text-gray-400">
               {user.dogName}의 체형과 나이를 고려한 코스로 생성돼요!
             </p>
           </div>
-          <label className="flex min-h-14 items-center justify-between rounded-xl bg-gray-100/50 px-5 py-3">
-            <span className="type-head-sb-18 text-gray-600">날짜</span>
-            <TextField
-              aria-label="날짜"
-              type="date"
-              className="h-9 w-40 border-0 bg-transparent p-0 text-right shadow-none"
-              state={courseDraft.date ? "completed" : "writing"}
-              value={courseDraft.date}
-              onChange={(event) =>
-                updateCourseDraft({ date: event.target.value })
-              }
-            />
-          </label>
-          <fieldset className="space-y-3 rounded-xl bg-gray-100/50 px-5 pb-4 pt-1">
-            <legend className="type-head-sb-18 w-full border-b border-gray-150 py-3 text-gray-600">시간</legend>
-            <div className="space-y-2">
-            <label className="flex items-center justify-between">
-              <span className="type-body-sb-14 text-gray-400">시작 시간</span>
+          <div className="mt-5 space-y-5 px-5">
+            <label className="relative flex h-18 items-center justify-between rounded-xl bg-gray-100/40 px-5 py-4">
+              <span className="type-head-sb-18 text-gray-600">날짜</span>
+              <span className="type-body-sb-16 text-gray-400">
+                {formatCourseDate(courseDraft.date)}
+              </span>
               <TextField
-                aria-label="시작 시간"
-                type="time"
-                className="h-10 w-25 border-0 bg-gray-50 px-2 text-center shadow-[0_0_2px_var(--color-gray-100)]"
-                state={courseDraft.startTime ? "completed" : "writing"}
-                value={courseDraft.startTime}
+                aria-label="날짜"
+                type="date"
+                className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                state="completed"
+                value={courseDraft.date}
                 onChange={(event) =>
-                  updateCourseDraft({ startTime: event.target.value })
+                  updateCourseDraft({ date: event.target.value })
                 }
               />
             </label>
-            <label className="flex items-center justify-between">
-              <span className="type-body-sb-14 text-gray-400">종료 시간</span>
+
+            <fieldset className="space-y-3 rounded-xl bg-gray-100/40 px-5 pb-4 pt-1">
+              <legend className="type-head-sb-18 w-full border-b border-gray-150 py-3 text-gray-600">
+                시간
+              </legend>
+              <div className="space-y-2">
+                {(
+                  [
+                    ["시작 시간", "startTime"],
+                    ["종료 시간", "endTime"],
+                  ] as const
+                ).map(([label, field]) => (
+                  <label
+                    key={field}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="type-body-sb-14 text-gray-400">
+                      {label}
+                    </span>
+                    <span className="relative inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)]">
+                      <span className="type-body-r-14 text-gray-600">
+                        {formatCourseTime(courseDraft[field])}
+                      </span>
+                      <TextField
+                        aria-label={label}
+                        type="time"
+                        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                        state="completed"
+                        value={courseDraft[field]}
+                        onChange={(event) =>
+                          updateCourseDraft({ [field]: event.target.value })
+                        }
+                      />
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <label className="relative flex h-18 items-center justify-between gap-3 rounded-xl bg-gray-100/40 px-5 py-4">
+              <span className="type-head-sb-18 shrink-0 text-gray-600">
+                출발 위치
+              </span>
+              <span className="flex items-center gap-2 text-right">
+                <span className="type-body-r-13 text-red-500">현재위치</span>
+                <span className="type-body-sb-16 text-gray-400">
+                  {courseDraft.startLocation || "출발 위치 선택"}
+                </span>
+              </span>
               <TextField
-                aria-label="종료 시간"
-                type="time"
-                className="h-10 w-25 border-0 bg-gray-50 px-2 text-center shadow-[0_0_2px_var(--color-gray-100)]"
-                state={courseDraft.endTime ? "completed" : "writing"}
-                value={courseDraft.endTime}
+                aria-label="출발 위치"
+                className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0"
+                state="completed"
+                value={courseDraft.startLocation}
                 onChange={(event) =>
-                  updateCourseDraft({ endTime: event.target.value })
+                  updateCourseDraft({ startLocation: event.target.value })
                 }
               />
             </label>
-            </div>
-          </fieldset>
-          <label className="flex min-h-14 items-center justify-between gap-3 rounded-xl bg-gray-100/50 px-5 py-3">
-            <span className="type-head-sb-18 shrink-0 text-gray-600">출발 위치</span>
-            <TextField
-              aria-label="출발 위치"
-              className="h-9 flex-1 border-0 bg-transparent p-0 text-right shadow-none"
-              state={courseDraft.startLocation ? "completed" : "writing"}
-              value={courseDraft.startLocation}
-              onChange={(event) =>
-                updateCourseDraft({ startLocation: event.target.value })
-              }
-              placeholder="현재 위치 · 익산역"
-            />
-          </label>
-          <label className="block space-y-2 px-3">
-            <span className="type-head-sb-18 text-gray-600">코스 이름</span>
-            <TextField
-              aria-label="코스 이름"
-              className="h-10 border-x-0 border-t-0 border-b border-gray-150 bg-transparent px-0 shadow-none"
-              state={courseDraft.title ? "completed" : "writing"}
-              value={courseDraft.title}
-              maxLength={30}
-              onChange={(event) =>
-                updateCourseDraft({ title: event.target.value })
-              }
-              placeholder="코스 이름"
-            />
-          </label>
-          <fieldset className="space-y-3 px-3">
-            <legend className="type-head-sb-18 text-gray-600">산책 시간</legend>
-            <div className="grid grid-cols-3 gap-2">
-              {courseDurations.map((duration) => (
-                <ChoiceButton
-                  key={duration}
-                  state={
-                    courseDraft.duration === duration ? "selected" : "default"
-                  }
-                  aria-pressed={courseDraft.duration === duration}
-                  onClick={() => updateCourseDraft({ duration })}
-                  description="추천"
-                >
-                  {duration}분
-                </ChoiceButton>
-              ))}
-            </div>
-          </fieldset>
-          <fieldset className="space-y-3 px-3">
-            <legend className="type-head-sb-18 text-gray-600">들르고 싶은 곳을 골라주세요!</legend>
+          </div>
+
+          <fieldset className="mt-4 space-y-3 px-8 py-4">
+            <legend className="type-head-sb-18 text-gray-600">
+              들르고 싶은 곳을 골라주세요!
+            </legend>
             <div className="flex flex-wrap gap-2">
               {courseThemes.map((theme) => {
                 const selected = courseDraft.themes.includes(theme)
                 return (
-                  <ChoiceButton
+                  <button
                     key={theme}
-                    state={selected ? "selected" : "default"}
+                    type="button"
                     aria-pressed={selected}
+                    className={`type-body-r-16 h-8 rounded-full px-3 ${selected ? "bg-gray-900 text-gray-50" : "bg-gray-100 text-gray-200"}`}
                     onClick={() =>
                       updateCourseDraft({
                         themes: toggleCourseTheme(courseDraft.themes, theme),
                       })
                     }
-                    className="h-8 rounded-full px-3"
                   >
                     {theme}
-                  </ChoiceButton>
+                  </button>
                 )
               })}
             </div>
           </fieldset>
-          <p className="type-caption-r-12 px-3 text-gray-400">
-            필수 조건과 원하는 코스를 모두 선택하면 추천을 시작할 수 있어요.
-          </p>
-          <Button
-            size="full"
-            type="submit"
-            className="mt-auto"
-            disabled={!isCourseDraftComplete(courseDraft)}
-          >
-            코스 생성하기
-          </Button>
+
+          <div className="absolute right-5 bottom-6 left-5">
+            <Button
+              variant="dark"
+              size="full"
+              type="submit"
+              className="h-12 bg-gray-600 text-[18px] hover:bg-gray-600 active:bg-gray-600"
+              disabled={
+                !isCourseDraftComplete({
+                  ...courseDraft,
+                  title:
+                    courseDraft.title.trim() ||
+                    `${user.dogName}와 함께하는 산책`,
+                  duration: courseDraft.duration ?? 90,
+                })
+              }
+            >
+              만들기
+            </Button>
+          </div>
         </form>
       </Plain>
     )
@@ -2386,6 +2392,21 @@ function dedupeNearbyPlaces<T extends { content_id: string }>(places: T[]) {
 
 function findHomeArea(address?: string) {
   return address?.split(/\s+/).find((part) => part.endsWith("구")) ?? "내 주변"
+}
+
+function formatCourseDate(date: string) {
+  return date ? date.replaceAll("-", ".") : "날짜 선택"
+}
+
+function formatCourseTime(time: string) {
+  if (!time) return "시간 선택"
+
+  const [hourValue, minute = "00"] = time.split(":")
+  const hour = Number(hourValue)
+  const period = hour < 12 ? "오전" : "오후"
+  const displayHour = String(hour % 12 || 12).padStart(2, "0")
+
+  return `${period} ${displayHour} : ${minute}`
 }
 
 function formatCourseSpotTime(startTime: string | undefined, index: number) {

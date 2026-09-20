@@ -19,7 +19,7 @@ export type Course = {
 export const courseDurations = [60, 90, 120] as const
 export type CourseDuration = (typeof courseDurations)[number]
 
-export const courseThemes = ["산책", "카페", "활동"] as const
+export const courseThemes = ["식당", "산책", "카페", "액티비티"] as const
 export type CourseTheme = (typeof courseThemes)[number]
 
 export type CourseDraft = {
@@ -38,8 +38,8 @@ export const initialCourseDraft: CourseDraft = {
   startTime: "",
   endTime: "",
   startLocation: "",
-  duration: null,
-  themes: [],
+  duration: 90,
+  themes: ["식당"],
 }
 
 export function isCourseDraftComplete(draft: CourseDraft) {

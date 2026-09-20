@@ -17,9 +17,10 @@ const dogSizeByOnboardingValue: Record<
 }
 
 const categoryByTheme = {
+  식당: "FOOD",
   산책: "WALK",
   카페: "CAFE",
-  활동: "ACTIVITY",
+  액티비티: "ACTIVITY",
 } as const
 
 export type Coordinates = {
