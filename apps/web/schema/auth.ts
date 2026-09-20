@@ -2,6 +2,7 @@ import { z } from "zod"
 
 export const kakaoLoginRequestSchema = z.object({
   code: z.string().min(1),
+  redirect_uri: z.string().url(),
 })
 
 export const kakaoLoginResponseSchema = z.object({

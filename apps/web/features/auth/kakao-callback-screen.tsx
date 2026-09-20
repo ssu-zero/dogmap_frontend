@@ -10,6 +10,7 @@ import { setAccessToken, setSignupToken } from "@/api/client"
 import { kakaoLoginMutationOptions } from "@/query/auth"
 
 import { useAppFlow } from "../app-flow/app-flow-provider"
+import { getKakaoRedirectUri } from "./kakao"
 
 export function KakaoCallbackScreen({ code }: { code?: string }) {
   const router = useRouter()
@@ -19,6 +20,8 @@ export function KakaoCallbackScreen({ code }: { code?: string }) {
 
   useEffect(() => {
     if (started.current || !code) return
+    const redirectUri = getKakaoRedirectUri()
+    if (!redirectUri) return
 
     const exchangeKey = `dogmap.kakao-login-code:${code}`
 
@@ -31,7 +34,7 @@ export function KakaoCallbackScreen({ code }: { code?: string }) {
     window.sessionStorage.setItem(exchangeKey, "pending")
 
     login.mutate(
-      { code },
+      { code, redirect_uri: redirectUri },
       {
         onSuccess: (result) => {
           window.sessionStorage.removeItem(exchangeKey)
