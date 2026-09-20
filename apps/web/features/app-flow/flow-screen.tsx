@@ -940,7 +940,7 @@ function FlowScreen({
     return (
       <AppShell tab="home">
         <section className="relative h-[286px] shrink-0 overflow-hidden bg-gray-900 text-white">
-          <div className="pointer-events-none absolute left-0 top-[-12px] flex h-[214px] w-[500px] items-center justify-center overflow-hidden">
+          <div className="pointer-events-none absolute left-0 top-[50px] flex h-[214px] w-[500px] items-center justify-center overflow-hidden">
             <Image
               src="/img/home-wave.svg"
               alt=""
@@ -956,7 +956,7 @@ function FlowScreen({
             width={124}
             height={30}
             priority
-            className="absolute left-7 top-2 h-[30px] w-[124px]"
+            className="absolute left-7 top-[70px] h-[30px] w-[124px]"
           />
           <Image
             src="/img/home-dog.png"
@@ -964,9 +964,9 @@ function FlowScreen({
             width={206}
             height={260}
             priority
-            className="pointer-events-none absolute right-0 top-[46px] h-[260px] w-[206px] object-contain object-right"
+            className="pointer-events-none absolute left-[187px] top-[108px] h-[260px] w-[206px] object-cover"
           />
-          <div className="absolute left-5 top-[75px] flex flex-col items-start gap-6">
+          <div className="absolute left-5 top-[137px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
               오늘 <span className="text-red-600">{user.dogName}</span>랑
               <br />
