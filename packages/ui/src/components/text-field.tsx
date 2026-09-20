@@ -18,10 +18,11 @@ const textFieldVariants = cva(
 )
 type TextFieldProps = Omit<ComponentProps<"input">, "size"> &
   VariantProps<typeof textFieldVariants>
-function TextField({ state, className, ...props }: TextFieldProps) {
+function TextField({ state, className, style, ...props }: TextFieldProps) {
   return (
     <input
       data-ui="text-field"
+      style={{ ...style, outline: "none", outlineOffset: 0 }}
       className={cn(
         textFieldVariants({ state }),
         "text-[17px] leading-[1.412] font-medium placeholder:text-gray-150 focus:outline-none",
