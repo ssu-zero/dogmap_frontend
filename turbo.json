@@ -1,7 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": ["DOGMAP_API_ORIGIN"],
+  "globalEnv": ["DOGMAP_API_ORIGIN", "NEXT_PUBLIC_SITE_URL", "VERCEL_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
