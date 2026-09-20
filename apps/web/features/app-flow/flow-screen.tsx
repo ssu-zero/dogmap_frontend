@@ -951,7 +951,7 @@ function FlowScreen({
             />
           </div>
           <Image
-            src="/logo/home-with-paw.svg"
+            src="/logo/home-logo.svg"
             alt="개동여지도"
             width={124}
             height={30}
