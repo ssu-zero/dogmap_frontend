@@ -65,7 +65,11 @@ import {
 
 import { AppShell } from "./app-shell"
 import { useAppFlow } from "./app-flow-provider"
-import { fallbackCoordinates, KakaoCourseMap } from "./kakao-course-map"
+import {
+  fallbackCoordinates,
+  KakaoCourseMap,
+  KakaoLocationPicker,
+} from "./kakao-course-map"
 import {
   communityCourses,
   courseThemes,
@@ -248,6 +252,10 @@ function FlowScreen({
     null
   )
   const [coursePickerValue, setCoursePickerValue] = useState("")
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false)
+  const [pendingStartCoordinates, setPendingStartCoordinates] = useState(
+    coordinates
+  )
   const [homeCategory, setHomeCategory] = useState<
     "전체" | "식당" | "산책" | "카페" | "액티비티"
   >("전체")
@@ -284,6 +292,25 @@ function FlowScreen({
     if (screen !== "home" || demoMode || !locationPermissionPromptOpen) return
     homeLocationPromptShown.current = true
   }, [demoMode, locationPermissionPromptOpen, screen])
+
+  useEffect(() => {
+    if (screen !== "new-course" || courseDraft.startLocation) return
+
+    updateCourseDraft({ startLocation: "현재 위치" })
+    if (!("geolocation" in navigator)) return
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) =>
+        updateCoordinates({ lat: coords.latitude, lng: coords.longitude }),
+      () => undefined,
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 }
+    )
+  }, [
+    courseDraft.startLocation,
+    screen,
+    updateCoordinates,
+    updateCourseDraft,
+  ])
 
   useEffect(() => {
     if (
@@ -1301,7 +1328,14 @@ function FlowScreen({
               </div>
             </fieldset>
 
-            <label className="relative flex h-18 items-center justify-between gap-3 rounded-xl bg-gray-100/40 px-5 py-4">
+            <button
+              type="button"
+              className="flex h-18 w-full items-center justify-between gap-3 rounded-xl bg-gray-100/40 px-5 py-4 text-left"
+              onClick={() => {
+                setPendingStartCoordinates(coordinates)
+                setLocationPickerOpen(true)
+              }}
+            >
               <span className="type-head-sb-18 shrink-0 text-gray-600">
                 출발 위치
               </span>
@@ -1311,16 +1345,7 @@ function FlowScreen({
                   {courseDraft.startLocation || "출발 위치 선택"}
                 </span>
               </span>
-              <TextField
-                aria-label="출발 위치"
-                className="absolute inset-0 z-10 h-full w-full cursor-text opacity-0"
-                state="completed"
-                value={courseDraft.startLocation}
-                onChange={(event) =>
-                  updateCourseDraft({ startLocation: event.target.value })
-                }
-              />
-            </label>
+            </button>
           </div>
 
           <fieldset className="mt-4 space-y-3 px-8 py-4">
@@ -1421,6 +1446,65 @@ function FlowScreen({
                   }}
                 >
                   확인
+                </Button>
+              </section>
+            </div>
+          ) : null}
+
+          {locationPickerOpen ? (
+            <div
+              className="absolute inset-0 z-50 flex items-end bg-black/40"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="start-location-picker-title"
+            >
+              <button
+                type="button"
+                className="absolute inset-0 cursor-default"
+                aria-label="출발 위치 선택창 닫기"
+                onClick={() => setLocationPickerOpen(false)}
+              />
+              <section className="relative w-full rounded-t-3xl bg-white px-5 pt-6 pb-8 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <h2
+                      id="start-location-picker-title"
+                      className="type-head-sb-20"
+                    >
+                      출발 위치 선택
+                    </h2>
+                    <p className="type-body-r-14 mt-1 text-gray-400">
+                      지도를 눌러 출발 위치를 지정해 주세요.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="type-body-r-14 px-2 text-gray-400"
+                    onClick={() => setLocationPickerOpen(false)}
+                  >
+                    취소
+                  </button>
+                </div>
+                <KakaoLocationPicker
+                  center={pendingStartCoordinates}
+                  onSelectCoordinates={setPendingStartCoordinates}
+                  className="h-72 rounded-xl"
+                />
+                <p className="type-caption-r-12 mt-3 text-center text-gray-400">
+                  {pendingStartCoordinates.lat.toFixed(5)}, {" "}
+                  {pendingStartCoordinates.lng.toFixed(5)}
+                </p>
+                <Button
+                  type="button"
+                  size="full"
+                  className="mt-4"
+                  onClick={() => {
+                    updateCoordinates(pendingStartCoordinates)
+                    updateCourseDraft({ startLocation: "선택한 위치" })
+                    setLocationPickerOpen(false)
+                  }}
+                >
+                  이 위치로 설정
                 </Button>
               </section>
             </div>
