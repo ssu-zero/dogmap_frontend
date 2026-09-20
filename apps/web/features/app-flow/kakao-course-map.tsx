@@ -489,7 +489,6 @@ export function KakaoLocationPicker({
         >
           <input
             type="search"
-            data-ui="map-search"
             aria-label="출발 장소 검색"
             placeholder="장소를 검색해 주세요"
             value={query}
@@ -500,6 +499,7 @@ export function KakaoLocationPicker({
               setSearchState("idle")
             }}
             className="type-body-r-14 min-w-0 flex-1 bg-transparent text-gray-600 outline-none placeholder:text-gray-300"
+            style={{ outline: "none", outlineOffset: 0 }}
           />
           <button
             type="submit"
