@@ -214,12 +214,19 @@ export type OnboardingProfile = {
   dogName: string
   dogSize: "small" | "medium" | "large" | null
   birthYear: string
+  /**
+   * A local preview used while the new member is completing onboarding.
+   * The registration endpoint currently accepts an image URL only, so this is
+   * deliberately kept out of the API mapper until an upload URL is available.
+   */
+  profileImagePreview?: string | null
 }
 
 export const initialOnboardingProfile: OnboardingProfile = {
   dogName: "",
   dogSize: null,
   birthYear: "",
+  profileImagePreview: null,
 }
 
 export function isDogNameValid(dogName: string) {

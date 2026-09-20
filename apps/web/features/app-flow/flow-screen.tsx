@@ -150,6 +150,7 @@ function FlowScreen({
   const [authConfigurationError, setAuthConfigurationError] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const [onboardingNameFocused, setOnboardingNameFocused] = useState(false)
   const registerDog = useMutation(registerDogMutationOptions())
   const createApiCourse = useMutation(createCourseMutationOptions())
   const replaceCoursePlaces = useMutation(replaceCoursePlacesMutationOptions())
@@ -404,47 +405,81 @@ function FlowScreen({
     const nameValid = isDogNameValid(onboarding.dogName)
     return (
       <Plain>
-        <section className="flex min-h-[inherit] flex-col px-5 py-8">
-          <div className="flex-1 space-y-6">
-            <LoadingSteps steps={["current", "upcoming"]} />
-            <Image
-              src="/img/dog.png"
-              alt="반려견 프로필"
-              width={120}
-              height={120}
-              className="mx-auto mt-12 size-30 rounded-full object-cover"
-            />
-            <h1 className="type-head-sb-24">
-              함께 여행할 친구를
-              <br />
-              소개해 주세요
+        <section className="flex min-h-[inherit] flex-col bg-white pt-[var(--figma-safe-area-top)]">
+          <header className="h-[60px] shrink-0" aria-label="반려견 소개" />
+          <div className="flex min-h-0 flex-1 flex-col px-5">
+            <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
+              {"함께 여행할 친구를\n소개해주세요!"}
             </h1>
-            <label className="block space-y-2">
-              <span className="type-body-sb-16">이름을 입력해주세요*</span>
-              <TextField
-                aria-label="반려견 이름"
-                state={onboarding.dogName ? "completed" : "writing"}
-                value={onboarding.dogName}
-                maxLength={20}
-                onChange={(event) =>
-                  updateOnboarding({ dogName: event.target.value })
-                }
-                placeholder="반려견 이름"
-              />
-            </label>
-            {onboarding.dogName && !nameValid ? (
-              <p className="type-caption-r-12 text-red-600">
-                이름을 1~20자로 입력해주세요.
-              </p>
-            ) : null}
+            <div className="relative mx-auto mt-8 size-30 shrink-0">
+              {onboarding.profileImagePreview ? (
+                <img
+                  src={onboarding.profileImagePreview}
+                  alt="선택한 반려견 프로필"
+                  className="size-full rounded-full border-[3px] border-gray-900 object-cover"
+                />
+              ) : null}
+              <label
+                className={`absolute flex size-8 cursor-pointer items-center justify-center ${
+                  onboarding.profileImagePreview
+                    ? "bottom-0 right-0"
+                    : "left-1/2 top-[88px] -translate-x-1/2"
+                }`}
+              >
+                <span className="sr-only">반려견 사진 추가</span>
+                <Icon name="plus" className="size-8" />
+                <input
+                  className="sr-only"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const image = event.currentTarget.files?.[0]
+                    if (!image) return
+
+                    const reader = new FileReader()
+                    reader.addEventListener("load", () => {
+                      updateOnboarding({
+                        profileImagePreview:
+                          typeof reader.result === "string"
+                            ? reader.result
+                            : null,
+                      })
+                    })
+                    reader.readAsDataURL(image)
+                  }}
+                />
+              </label>
+            </div>
+            <TextField
+              aria-label="반려견 이름"
+              state={
+                onboarding.dogName
+                  ? onboardingNameFocused
+                    ? "writing"
+                    : "completed"
+                  : "default"
+              }
+              value={onboarding.dogName}
+              maxLength={20}
+              onFocus={() => setOnboardingNameFocused(true)}
+              onBlur={() => setOnboardingNameFocused(false)}
+              onChange={(event) =>
+                updateOnboarding({ dogName: event.target.value })
+              }
+              placeholder="반려견 이름"
+              className="mt-8 h-14 text-center"
+            />
+            <div className="mt-auto pb-6 pt-8">
+              <Button
+                size="full"
+                variant="dark"
+                disabled={!nameValid}
+                onClick={() => router.push("/onboarding/2")}
+              >
+                다음
+              </Button>
+            </div>
           </div>
-          <Button
-            size="full"
-            disabled={!nameValid}
-            onClick={() => router.push("/onboarding/2")}
-          >
-            다음
-          </Button>
         </section>
       </Plain>
     )
@@ -452,118 +487,135 @@ function FlowScreen({
 
   if (screen === "onboarding-two") {
     const complete = isDogInfoComplete(onboarding)
+    const birthYears = Array.from({ length: 22 }, (_, index) =>
+      String(new Date().getFullYear() - index)
+    )
     return (
       <Plain>
-        <section className="flex min-h-[inherit] flex-col px-5 py-8">
-          <div className="flex-1 space-y-6">
-            <button
-              type="button"
-              className="-ml-2"
-              onClick={() => router.back()}
-              aria-label="이전 단계로"
-            >
-              <span aria-hidden>‹</span>
-            </button>
-            <LoadingSteps steps={["past", "current"]} />
-            <div>
-              <h1 className="type-head-sb-24">
-                {onboarding.dogName}에게 맞는
-                <br />
-                코스를 짜드릴게요
-              </h1>
-              <p className="type-body-r-16 mt-3 text-gray-400">
-                입력한 정보로 산책 코스와 장소를 추천해줘요
-              </p>
-            </div>
-            <label className="block space-y-2">
-              <span className="type-body-sb-16">출생연도*</span>
-              <TextField
-                aria-label="출생연도"
-                inputMode="numeric"
-                maxLength={4}
-                placeholder="예: 2023"
-                value={onboarding.birthYear}
-                state={onboarding.birthYear ? "completed" : "writing"}
-                onChange={(event) =>
-                  updateOnboarding({
-                    birthYear: event.target.value.replace(/\D/g, ""),
-                  })
-                }
-              />
-            </label>
-            <fieldset className="space-y-3">
-              <legend className="type-body-sb-16">크기*</legend>
-              <div className="grid grid-cols-3 gap-2">
-                {(
-                  [
-                    ["small", "소형", "10kg 이하"],
-                    ["medium", "중형", "10kg ~ 25kg"],
-                    ["large", "대형", "25kg 이상"],
-                  ] as const
-                ).map(([size, label, description]) => (
-                  <ChoiceButton
-                    key={size}
-                    aria-pressed={onboarding.dogSize === size}
-                    state={onboarding.dogSize === size ? "selected" : "default"}
-                    description={description}
-                    onClick={() => updateOnboarding({ dogSize: size })}
+        <section className="flex min-h-[inherit] flex-col bg-white pt-[var(--figma-safe-area-top)]">
+          <header className="h-[60px] shrink-0" aria-label="반려견 정보" />
+          <div className="flex min-h-0 flex-1 flex-col px-5">
+            <h1 className="type-head-sb-24 whitespace-pre-line text-gray-800">
+              {`${onboarding.dogName || "반려견"} 반가워요!\n${onboarding.dogName || "반려견"}를 소개해주세요`}
+            </h1>
+            <div className="-mx-1 mt-7">
+              <fieldset>
+                <legend className="type-body-sb-16 px-1 text-gray-800">
+                  크기
+                </legend>
+                <div className="mt-3 grid grid-cols-3 gap-1">
+                  {(
+                    [
+                      ["small", "소형", "10kg이하"],
+                      ["medium", "중형", "10kg ~ 25kg"],
+                      ["large", "대형", "25kg이상"],
+                    ] as const
+                  ).map(([size, label, description]) => (
+                    <ChoiceButton
+                      key={size}
+                      aria-pressed={onboarding.dogSize === size}
+                      state={
+                        onboarding.dogSize === size ? "selected" : "default"
+                      }
+                      description={description}
+                      className={`h-16 min-h-0 min-w-0 w-full ${
+                        onboarding.dogSize && onboarding.dogSize !== size
+                          ? "opacity-40"
+                          : ""
+                      }`}
+                      onClick={() => updateOnboarding({ dogSize: size })}
+                    >
+                      {label}
+                    </ChoiceButton>
+                  ))}
+                </div>
+              </fieldset>
+              <label className="mt-6 block space-y-3 px-1">
+                <span className="type-body-sb-16 text-gray-800">출생 연도</span>
+                <span className="relative block">
+                  <select
+                    aria-label="출생 연도"
+                    className={`type-body-r-16 h-12 w-full appearance-none rounded-xl bg-gray-50 px-6 pr-12 focus:outline-none ${
+                      onboarding.birthYear ? "text-gray-800" : "text-gray-150"
+                    }`}
+                    value={onboarding.birthYear}
+                    onChange={(event) =>
+                      updateOnboarding({ birthYear: event.target.value })
+                    }
                   >
-                    {label}
-                  </ChoiceButton>
-                ))}
-              </div>
-            </fieldset>
-            <div className="rounded-xl bg-gray-50 p-5">
-              <p className="type-body-r-14 text-gray-500">
-                체중·나이는 권장 체류시간을 계산하고 무리 없는 코스를 추천하는
-                데 사용돼요.
-              </p>
+                    <option value="" disabled>
+                      출생 연도를 선택해주세요
+                    </option>
+                    {birthYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}년
+                      </option>
+                    ))}
+                  </select>
+                  <Icon
+                    name="arrowDown"
+                    className="pointer-events-none absolute right-6 top-1/2 size-6 -translate-y-1/2"
+                  />
+                </span>
+              </label>
             </div>
-          </div>
-          <Button
-            size="full"
-            disabled={
-              !complete ||
-              registerDog.isPending ||
-              (!demoMode && !getSignupToken())
-            }
-            onClick={() => {
-              if (demoMode) {
-                completeOnboarding()
-                router.push("/")
-                return
-              }
+            <div className="mt-auto pt-8">
+              <div className="flex rounded-xl bg-gray-50 px-5 py-3">
+                <Icon name="pawFill" className="mr-1 size-5 shrink-0" />
+                <p className="type-body-r-14 break-keep text-gray-200">
+                  체중·나이는 산책 스팟의 권장 체류시간을 계산하는데 쓰여요.
+                  어린·노령 반려동물은 무리 없는 코스로 조정돼요.
+                </p>
+              </div>
+              <div className="pb-6 pt-6">
+                <Button
+                  size="full"
+                  variant="dark"
+                  disabled={
+                    !complete ||
+                    registerDog.isPending ||
+                    (!demoMode && !getSignupToken())
+                  }
+                  onClick={() => {
+                    if (demoMode) {
+                      completeOnboarding()
+                      router.push("/")
+                      return
+                    }
 
-              if (!getSignupToken()) return
-              registerDog.mutate(onboardingToDogCreate(onboarding), {
-                onSuccess: (result) => {
-                  setAccessToken(result.access_token)
-                  updateUser({
-                    dogName: result.dog.name,
-                    age:
-                      result.dog.age === null
-                        ? "나이 미입력"
-                        : `${result.dog.age}살`,
-                  })
-                  completeOnboarding()
-                  queryClient.setQueryData(dogQueryKeys.me, result.dog)
-                  router.push("/")
-                },
-              })
-            }}
-          >
-            {registerDog.isPending ? "프로필 등록 중" : "개동여지도 시작하기"}
-          </Button>
-          {!demoMode && !getSignupToken() ? (
-            <p role="alert" className="type-caption-r-12 mt-2 text-red-600">
-              카카오 로그인을 먼저 완료해주세요.
-            </p>
-          ) : null}
-          {registerDog.isError ? (
-            <p role="alert" className="type-caption-r-12 mt-2 text-red-600">
-              {registerDog.error.message}
-            </p>
-          ) : null}
+                    if (!getSignupToken()) return
+                    registerDog.mutate(onboardingToDogCreate(onboarding), {
+                      onSuccess: (result) => {
+                        setAccessToken(result.access_token)
+                        updateUser({
+                          dogName: result.dog.name,
+                          age:
+                            result.dog.age === null
+                              ? "나이 미입력"
+                              : `${result.dog.age}살`,
+                        })
+                        completeOnboarding()
+                        queryClient.setQueryData(dogQueryKeys.me, result.dog)
+                        router.push("/")
+                      },
+                    })
+                  }}
+                >
+                  {registerDog.isPending ? "프로필 등록 중" : "개동여지도 시작하기"}
+                </Button>
+              </div>
+            </div>
+            {!demoMode && !getSignupToken() ? (
+              <p role="alert" className="type-caption-r-12 -mt-4 pb-6 text-red-600">
+                카카오 로그인을 먼저 완료해주세요.
+              </p>
+            ) : null}
+            {registerDog.isError ? (
+              <p role="alert" className="type-caption-r-12 -mt-4 pb-6 text-red-600">
+                {registerDog.error.message}
+              </p>
+            ) : null}
+          </div>
         </section>
       </Plain>
     )
