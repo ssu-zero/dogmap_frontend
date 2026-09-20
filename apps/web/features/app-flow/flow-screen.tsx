@@ -147,6 +147,7 @@ function FlowScreen({
     createCourse: createDemoCourse,
     addCourse,
     coordinates,
+    courseStartCoordinates,
     courseDraft,
     dismissLocationPermissionPrompt,
     completeOnboarding,
@@ -156,6 +157,7 @@ function FlowScreen({
     saveDiary,
     diaries,
     updateCourseDraft,
+    updateCourseStartCoordinates,
     updateCoordinates,
     setAllTerms,
     setTerm,
@@ -254,7 +256,10 @@ function FlowScreen({
   )
   const [coursePickerValue, setCoursePickerValue] = useState("")
   const [pendingStartCoordinates, setPendingStartCoordinates] = useState(
-    coordinates
+    courseStartCoordinates ?? coordinates
+  )
+  const [pendingStartLocation, setPendingStartLocation] = useState(
+    courseDraft.startLocation || "현재 위치"
   )
   const [homeCategory, setHomeCategory] = useState<
     "전체" | "식당" | "산책" | "카페" | "액티비티"
@@ -456,7 +461,12 @@ function FlowScreen({
     }
 
     void createApiCourse
-      .mutateAsync(courseDraftToApiRequest(courseDraft, coordinates))
+      .mutateAsync(
+        courseDraftToApiRequest(
+          courseDraft,
+          courseStartCoordinates ?? coordinates
+        )
+      )
       .then(async (result) => {
         const finalized = await replaceCoursePlaces.mutateAsync({
           courseId: String(result.course_id),
@@ -475,6 +485,7 @@ function FlowScreen({
   }, [
     addCourse,
     coordinates,
+    courseStartCoordinates,
     courseDraft,
     createApiCourse,
     createDemoCourse,
@@ -1341,9 +1352,13 @@ function FlowScreen({
               <span className="type-head-sb-18 shrink-0 text-gray-600">
                 출발 위치
               </span>
-              <span className="flex items-center gap-2 text-right">
-                <span className="type-body-r-13 text-red-500">현재위치</span>
-                <span className="type-body-sb-16 text-gray-400">
+              <span className="flex min-w-0 items-center gap-2 text-right">
+                {!courseStartCoordinates ? (
+                  <span className="type-body-r-13 shrink-0 text-red-500">
+                    현재위치
+                  </span>
+                ) : null}
+                <span className="type-body-sb-16 min-w-0 truncate text-gray-400">
                   {courseDraft.startLocation || "출발 위치 선택"}
                 </span>
               </span>
@@ -1465,19 +1480,24 @@ function FlowScreen({
           <div className="relative min-h-0 flex-1 px-5 pt-3 pb-5">
             <KakaoLocationPicker
               center={pendingStartCoordinates}
-              onSelectCoordinates={setPendingStartCoordinates}
+              selectedLabel={pendingStartLocation}
+              onSelectLocation={(nextCoordinates, label) => {
+                setPendingStartCoordinates(nextCoordinates)
+                setPendingStartLocation(label)
+              }}
               className="h-full min-h-80 rounded-xl"
             />
-            <p className="type-body-r-14 pointer-events-none absolute top-7 right-8 left-8 rounded-lg bg-white/90 px-4 py-3 text-center text-gray-500 shadow-sm">
-              지도를 눌러 출발 위치를 지정해 주세요.
-            </p>
           </div>
           <div className="border-t border-gray-100 bg-white px-5 pt-4 pb-6">
             <Button
               size="full"
               onClick={() => {
-                updateCoordinates(pendingStartCoordinates)
-                updateCourseDraft({ startLocation: "선택한 위치" })
+                updateCourseStartCoordinates(
+                  pendingStartLocation === "현재 위치"
+                    ? null
+                    : pendingStartCoordinates
+                )
+                updateCourseDraft({ startLocation: pendingStartLocation })
                 router.back()
               }}
             >

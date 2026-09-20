@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -16,6 +16,7 @@ type KakaoMapProps = {
 
 type KakaoMapInstance = {
   setBounds: (bounds: KakaoBounds) => void
+  setCenter: (position: KakaoLatLng) => void
   relayout: () => void
 }
 
@@ -23,6 +24,21 @@ type KakaoBounds = { extend: (position: unknown) => void }
 type KakaoLatLng = { getLat: () => number; getLng: () => number }
 type KakaoMouseEvent = { latLng: KakaoLatLng }
 type KakaoMarker = { setPosition: (position: unknown) => void }
+type KakaoPlace = {
+  id: string
+  place_name: string
+  road_address_name: string
+  address_name: string
+  x: string
+  y: string
+}
+type KakaoPlacesService = {
+  keywordSearch: (
+    keyword: string,
+    callback: (results: KakaoPlace[], status: string) => void,
+    options?: { size: number }
+  ) => void
+}
 
 type KakaoMaps = {
   load: (callback: () => void) => void
@@ -38,6 +54,10 @@ type KakaoMaps = {
     strokeStyle: "solid"
   }) => unknown
   Marker: new (options: { map: KakaoMapInstance; position: unknown }) => KakaoMarker
+  services?: {
+    Places: new () => KakaoPlacesService
+    Status: { OK: string; ZERO_RESULT: string; ERROR: string }
+  }
   event: {
     addListener: (
       target: unknown,
@@ -104,7 +124,7 @@ function loadKakaoMaps(appKey: string) {
     const script = document.createElement("script")
     script.dataset.kakaoMapsSdk = "true"
     script.async = true
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&appkey=${appKey}`
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?autoload=false&libraries=services&appkey=${appKey}`
     script.addEventListener("load", initialize, { once: true })
     script.addEventListener("error", rejectLoad, { once: true })
     document.head.appendChild(script)
@@ -280,46 +300,128 @@ export function KakaoCourseMap({
 
 type KakaoLocationPickerProps = {
   center: Coordinates
-  onSelectCoordinates: (coordinates: Coordinates) => void
+  selectedLabel: string
+  onSelectLocation: (coordinates: Coordinates, label: string) => void
   className?: string
 }
 
 export function KakaoLocationPicker({
   center,
-  onSelectCoordinates,
+  selectedLabel,
+  onSelectLocation,
   className,
 }: KakaoLocationPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const onSelectRef = useRef(onSelectCoordinates)
+  const initialCenterRef = useRef(center)
+  const mapRef = useRef<KakaoMapInstance | null>(null)
+  const markerRef = useRef<KakaoMarker | null>(null)
+  const onSelectRef = useRef(onSelectLocation)
+  const searchRequestRef = useRef(0)
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<KakaoPlace[]>([])
+  const [searchState, setSearchState] = useState<
+    "idle" | "loading" | "empty" | "error"
+  >("idle")
   const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY
   const { maps, loadError, retry } = useKakaoMaps(appKey)
 
   useEffect(() => {
-    onSelectRef.current = onSelectCoordinates
-  }, [onSelectCoordinates])
+    onSelectRef.current = onSelectLocation
+  }, [onSelectLocation])
 
   useEffect(() => {
     if (!maps || !containerRef.current) return
 
     const container = containerRef.current
+    const initialCenter = initialCenterRef.current
     const map = new maps.Map(container, {
-      center: new maps.LatLng(center.lat, center.lng),
+      center: new maps.LatLng(initialCenter.lat, initialCenter.lng),
       level: 3,
     })
     const marker = new maps.Marker({
       map,
-      position: new maps.LatLng(center.lat, center.lng),
+      position: new maps.LatLng(initialCenter.lat, initialCenter.lng),
     })
+    mapRef.current = map
+    markerRef.current = marker
 
     maps.event.addListener(map, "click", (mouseEvent) => {
       marker.setPosition(mouseEvent.latLng)
-      onSelectRef.current({
-        lat: mouseEvent.latLng.getLat(),
-        lng: mouseEvent.latLng.getLng(),
-      })
+      searchRequestRef.current += 1
+      setResults([])
+      setQuery("")
+      setSearchState("idle")
+      onSelectRef.current(
+        {
+          lat: mouseEvent.latLng.getLat(),
+          lng: mouseEvent.latLng.getLng(),
+        },
+        "선택한 위치"
+      )
     })
     map.relayout()
-  }, [center, maps])
+
+    return () => {
+      mapRef.current = null
+      markerRef.current = null
+    }
+  }, [maps])
+
+  function searchPlaces(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const keyword = query.trim()
+    if (!keyword) {
+      setResults([])
+      setSearchState("idle")
+      return
+    }
+
+    const services = maps?.services
+    if (!services) {
+      setSearchState("error")
+      return
+    }
+
+    const request = ++searchRequestRef.current
+    setResults([])
+    setSearchState("loading")
+    new services.Places().keywordSearch(
+      keyword,
+      (places, status) => {
+        if (request !== searchRequestRef.current) return
+
+        if (status === services.Status.OK) {
+          const validPlaces = places.filter(
+            (place) =>
+              Number.isFinite(Number(place.x)) &&
+              Number.isFinite(Number(place.y))
+          )
+          setResults(validPlaces)
+          setSearchState(validPlaces.length ? "idle" : "empty")
+        } else {
+          setResults([])
+          setSearchState(
+            status === services.Status.ZERO_RESULT ? "empty" : "error"
+          )
+        }
+      },
+      { size: 10 }
+    )
+  }
+
+  function selectPlace(place: KakaoPlace) {
+    if (!maps) return
+
+    const coordinates = { lat: Number(place.y), lng: Number(place.x) }
+    const position = new maps.LatLng(coordinates.lat, coordinates.lng)
+    mapRef.current?.setCenter(position)
+    markerRef.current?.setPosition(position)
+    searchRequestRef.current += 1
+    setResults([])
+    setSearchState("idle")
+    setQuery(place.place_name)
+    onSelectRef.current(coordinates, place.place_name)
+  }
 
   if (!appKey) {
     return (
@@ -342,6 +444,70 @@ export function KakaoLocationPicker({
       aria-label="출발 위치 지도"
     >
       <div ref={containerRef} className="size-full" />
+      <div className="absolute inset-x-3 top-3 z-10">
+        <form
+          className="flex h-12 items-center gap-2 rounded-xl bg-white px-3 shadow-[0_2px_10px_rgba(0,0,0,0.12)]"
+          onSubmit={searchPlaces}
+          role="search"
+        >
+          <input
+            type="search"
+            aria-label="출발 장소 검색"
+            placeholder="장소를 검색해 주세요"
+            value={query}
+            onChange={(event) => {
+              searchRequestRef.current += 1
+              setQuery(event.target.value)
+              setResults([])
+              setSearchState("idle")
+            }}
+            className="type-body-r-14 min-w-0 flex-1 bg-transparent text-gray-600 outline-none placeholder:text-gray-300"
+          />
+          <button
+            type="submit"
+            disabled={!query.trim() || !maps}
+            className="type-body-sb-14 shrink-0 text-red-500 disabled:text-gray-300"
+          >
+            검색
+          </button>
+        </form>
+        {results.length > 0 ? (
+          <ul className="mt-2 max-h-64 overflow-y-auto rounded-xl bg-white py-1 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
+            {results.map((place) => (
+              <li key={place.id} className="border-b border-gray-100 last:border-b-0">
+                <button
+                  type="button"
+                  className="w-full px-4 py-3 text-left"
+                  onClick={() => selectPlace(place)}
+                >
+                  <span className="type-body-sb-14 block text-gray-600">
+                    {place.place_name}
+                  </span>
+                  <span className="type-caption-r-12 mt-1 block text-gray-400">
+                    {place.road_address_name || place.address_name}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : searchState !== "idle" ? (
+          <p
+            className="type-body-r-14 mt-2 rounded-xl bg-white px-4 py-3 text-gray-500 shadow-[0_2px_10px_rgba(0,0,0,0.12)]"
+            role="status"
+          >
+            {searchState === "loading"
+              ? "장소를 찾고 있어요."
+              : searchState === "empty"
+                ? "검색 결과가 없어요. 다른 장소명을 입력해 주세요."
+                : "검색에 실패했어요. 다시 시도해 주세요."}
+          </p>
+        ) : null}
+      </div>
+      {!loadError && maps ? (
+        <p className="type-body-r-14 pointer-events-none absolute right-3 bottom-3 left-3 rounded-lg bg-white/95 px-4 py-3 text-center text-gray-600 shadow-sm">
+          {selectedLabel || "지도에서 출발 위치를 누르거나 장소를 검색해 주세요."}
+        </p>
+      ) : null}
       {loadError ? <MapLoadError onRetry={retry} /> : null}
       {!maps && !loadError ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-100/80">

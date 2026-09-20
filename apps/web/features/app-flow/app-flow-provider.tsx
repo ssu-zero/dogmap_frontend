@@ -29,6 +29,7 @@ type AppFlowState = {
   locationPermissionPromptOpen: boolean
   courseDraft: CourseDraft
   coordinates: { lat: number; lng: number }
+  courseStartCoordinates: { lat: number; lng: number } | null
   diaries: Record<string, string>
   updateUser: (updates: Partial<typeof currentUser>) => void
   createCourse: (draft: CourseDraft) => Course
@@ -40,6 +41,7 @@ type AppFlowState = {
   completeOnboarding: () => void
   dismissLocationPermissionPrompt: () => void
   updateCoordinates: (coordinates: { lat: number; lng: number }) => void
+  updateCourseStartCoordinates: (coordinates: { lat: number; lng: number } | null) => void
   updateCourseDraft: (updates: Partial<CourseDraft>) => void
   saveDiary: (courseId: string, body: string) => void
 }
@@ -62,6 +64,10 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
     lat: 35.9402,
     lng: 126.9463,
   })
+  const [courseStartCoordinates, setCourseStartCoordinates] = useState<{
+    lat: number
+    lng: number
+  } | null>(null)
   const [diaries, setDiaries] = useState<Record<string, string>>({})
 
   const value = useMemo<AppFlowState>(
@@ -74,6 +80,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       locationPermissionPromptOpen,
       courseDraft,
       coordinates,
+      courseStartCoordinates,
       diaries,
       updateUser: (updates) =>
         setUser((previous) => ({ ...previous, ...updates })),
@@ -94,6 +101,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
           date: draft.date,
           startTime: draft.startTime,
           endTime: draft.endTime,
+          startCoordinates: courseStartCoordinates ?? coordinates,
         }
         setCourses((previous) => [course, ...previous])
         return course
@@ -125,6 +133,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       dismissLocationPermissionPrompt: () =>
         setLocationPermissionPromptOpen(false),
       updateCoordinates: setCoordinates,
+      updateCourseStartCoordinates: setCourseStartCoordinates,
       updateCourseDraft: (updates) =>
         setCourseDraft((previous) => ({ ...previous, ...updates })),
       saveDiary: (courseId, body) =>
@@ -133,6 +142,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
     [
       courseDraft,
       coordinates,
+      courseStartCoordinates,
       diaries,
       courses,
       locationPermissionPromptOpen,
