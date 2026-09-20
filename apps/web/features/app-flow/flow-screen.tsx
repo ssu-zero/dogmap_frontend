@@ -24,6 +24,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import homeDogImage from "../../../../packages/ui/src/assets/images/dog.png"
+import smallDogImage from "../../../../packages/ui/src/assets/images/dog_small.png"
 
 import {
   ApiError,
@@ -68,6 +69,7 @@ import {
   courseDraftToApiRequest,
   nearbyCourseToFlowCourse,
   onboardingToDogCreate,
+  sharedOwnedCoursesFromSummaries,
 } from "./api-mappers"
 
 import { AppShell } from "./app-shell"
@@ -244,6 +246,14 @@ function FlowScreen({
     ...myCoursesQueryOptions(),
     enabled: hasAccessToken && !demoMode,
   })
+  // The course summary omits is_shared, so inspect owned details to keep the
+  // user's shared courses visible even when they fall outside the nearby radius.
+  const mySharedCourseDetails = useQueries({
+    queries: (myCourses.data ?? []).map((item) => ({
+      ...courseDetailQueryOptions(String(item.course_id)),
+      enabled: hasAccessToken && !demoMode && screen === "community",
+    })),
+  })
   const savedCourses = useQuery({
     ...savedCoursesQueryOptions(),
     enabled: hasAccessToken && !demoMode,
@@ -412,6 +422,11 @@ function FlowScreen({
   )
   const serverMyCourses = (myCourses.data ?? []).map((item) =>
     nearbyCourseToFlowCourse(item, user.id)
+  )
+  const serverOwnSharedCourses = sharedOwnedCoursesFromSummaries(
+    myCourses.data ?? [],
+    mySharedCourseDetails.map((query) => query.data),
+    user.id
   )
   const serverSavedCourses = (savedCourses.data ?? []).map(
     (item) => nearbyCourseToFlowCourse(item, user.id)
@@ -1938,7 +1953,7 @@ function FlowScreen({
                 onClick={() => router.push(`/courses/${course.id}/map`)}
               />
               <Image
-                src="/img/dog_small.png"
+                src={smallDogImage}
                 alt=""
                 width={88}
                 height={71}
@@ -2477,9 +2492,9 @@ function FlowScreen({
     return (
       <Plain>
         <section className="flex min-h-[inherit] flex-col bg-white">
-          <div className="relative h-84 shrink-0 overflow-hidden">
+          <div className="relative isolate h-84 shrink-0 overflow-hidden">
             <KakaoCourseMap
-              className="size-full"
+              className="relative z-0 size-full"
               center={course.startCoordinates ?? fallbackCoordinates}
               path={course.path}
               places={course.places}
@@ -2488,17 +2503,17 @@ function FlowScreen({
             />
             <button
               type="button"
-              className="absolute inset-x-0 top-0 z-[1] h-56"
+              className="absolute inset-x-0 top-0 z-10 h-56"
               aria-label="지도 전체 보기"
               onClick={() => router.push(`/community/${course.id}/map`)}
             />
             <Header
-              className="absolute inset-x-0 top-0 z-[2] bg-gradient-to-b from-white/80 to-transparent"
+              className="absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-white/80 to-transparent"
               title={undefined}
               onBack={() => router.push("/community")}
             />
             {ownCourse ? (
-              <span className="type-body-r-14 absolute bottom-32 left-5 z-[2] inline-flex items-center gap-0.5 rounded-full bg-black/50 px-3 py-1 text-white">
+              <span className="type-body-r-14 absolute bottom-32 left-5 z-20 inline-flex items-center gap-0.5 rounded-full bg-black/50 px-3 py-1 text-white">
                 <span
                   aria-hidden="true"
                   className="size-5 bg-white"
@@ -2508,7 +2523,7 @@ function FlowScreen({
               </span>
             ) : null}
           </div>
-          <section className="relative -mt-28 flex flex-1 flex-col rounded-t-[20px] bg-white px-5 pt-6 pb-6">
+          <section className="relative z-10 -mt-28 flex flex-1 flex-col rounded-t-[20px] bg-white px-5 pt-6 pb-6">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 space-y-3">
                 <h1 className="type-head-sb-22 text-gray-800">{course.title}</h1>
@@ -2812,7 +2827,7 @@ function FlowScreen({
           ...courses.filter((item) => item.shared),
           ...communityCourses.filter((item) => !removedCommunityCourseIds.includes(item.id)),
         ])
-      : serverRecommendations
+      : dedupeCourses([...serverOwnSharedCourses, ...serverRecommendations])
     const visibleCourses = sharedCourses.filter(
       (item) => communityFilter === "전체" || !item.dogSize || item.dogSize === communityFilter
     )
@@ -2833,9 +2848,12 @@ function FlowScreen({
               </Chip>
             ))}
           </div>
-          {!demoMode && nearbyCourses.isPending ? (
+          {!demoMode && visibleCourses.length === 0 && (
+            nearbyCourses.isPending ||
+            (hasAccessToken && (myCourses.isPending || mySharedCourseDetails.some((query) => query.isPending)))
+          ) ? (
             <p className="type-body-r-14 mt-9 text-gray-400">공유된 코스를 불러오고 있어요.</p>
-          ) : !demoMode && nearbyCourses.isError ? (
+          ) : !demoMode && visibleCourses.length === 0 && nearbyCourses.isError ? (
             <div className="mt-9 space-y-3">
               <p className="type-body-r-14 text-gray-400">공유된 코스를 불러오지 못했어요.</p>
               <Button variant="secondary" size="sm" onClick={() => void nearbyCourses.refetch()}>다시 불러오기</Button>

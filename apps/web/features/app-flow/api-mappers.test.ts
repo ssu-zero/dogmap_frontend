@@ -5,6 +5,7 @@ import {
   courseAfterRemovingSpots,
   courseDraftToApiRequest,
   onboardingToDogCreate,
+  sharedOwnedCoursesFromSummaries,
 } from "./api-mappers"
 
 describe("app-flow API mappers", () => {
@@ -88,6 +89,33 @@ describe("app-flow API mappers", () => {
       duration: 62,
       places: ["서울숲"],
     })
+  })
+
+  it("shows only owned shared courses even when nearby search returns none", () => {
+    const summary = {
+      course_id: 1,
+      title: "내 공유 코스",
+      start_lat: 37.5,
+      start_lng: 127.1,
+      distance_meters: null,
+      total_distance_meters: 1200,
+      total_duration_minutes: 60,
+      place_count: 2,
+      thumbnail_image_url: null,
+      is_owner: true,
+      like_count: 0,
+      is_liked: false,
+      save_count: 0,
+      is_saved: false,
+    }
+    const courses = sharedOwnedCoursesFromSummaries(
+      [summary, { ...summary, course_id: 2, title: "비공개 코스" }],
+      [{ is_shared: true }, { is_shared: false }],
+      "me"
+    )
+
+    expect(courses).toHaveLength(1)
+    expect(courses[0]).toMatchObject({ id: "1", title: "내 공유 코스", userId: "me", shared: true })
   })
 
   it("removes a spot, resequences the rest, and drops its old route segment", () => {

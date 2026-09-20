@@ -148,6 +148,18 @@ export function nearbyCourseToFlowCourse(
   }
 }
 
+export function sharedOwnedCoursesFromSummaries(
+  summaries: NearbyCourse[],
+  details: Array<{ is_shared: boolean } | undefined>,
+  currentUserId: string
+): Course[] {
+  return summaries.flatMap((summary, index) =>
+    details[index]?.is_shared
+      ? [{ ...nearbyCourseToFlowCourse(summary, currentUserId), shared: true }]
+      : []
+  )
+}
+
 /** The places API trusts the client to rebuild the route after a stop is removed. */
 export function courseAfterRemovingSpots(
   course: ApiCourse,
