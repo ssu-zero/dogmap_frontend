@@ -29,9 +29,8 @@ test("launches through terms and completes the dog onboarding flow", async ({
     page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
   await expect(
-    page.getByRole("dialog", { name: "위치 정보 권한" })
-  ).toBeVisible()
-  await page.getByRole("button", { name: "아니요" }).click()
+    page.getByRole("dialog", { name: "위치 권한 필요" })
+  ).toHaveCount(0)
   await expect(page.getByText("몽이와 함께")).toBeVisible()
 })
 

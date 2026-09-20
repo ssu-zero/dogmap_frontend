@@ -66,10 +66,13 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
-test("exchanges a Kakao code with the backend and stores the access token", async ({
+test("exchanges a Kakao code and uses the granted location on home", async ({
   page,
+  context,
 }) => {
   await useLiveApiMode(page)
+  await context.grantPermissions(["geolocation"])
+  await context.setGeolocation({ latitude: 37.5665, longitude: 126.978 })
   let loginBody: unknown
 
   await page.route("**/api.dogmap.store/api/auth/kakao/login", async (route) => {
@@ -105,10 +108,20 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
     })
   })
 
+  const nearbyRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url())
+    return (
+      url.pathname === "/api/places" &&
+      url.searchParams.get("lat") === "37.5665" &&
+      url.searchParams.get("lng") === "126.978"
+    )
+  })
   await page.goto("/auth/kakao/callback?code=kakao-code")
+  await nearbyRequest
   await expect(
     page.getByRole("heading", { name: /오늘 .*랑.*어디 놀러 갈까요/ })
   ).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "위치 권한 필요" })).toHaveCount(0)
   expect(loginBody).toMatchObject({
     code: "kakao-code",
     redirect_uri: "http://127.0.0.1:3001/auth/kakao/callback",
@@ -118,6 +131,49 @@ test("exchanges a Kakao code with the backend and stores the access token", asyn
       page.evaluate(() => localStorage.getItem("dogmap.access-token"))
     )
     .toBe("access-from-server")
+})
+
+test("keeps the live home behind a permission gate when location is denied", async ({
+  page,
+}) => {
+  await useLiveApiMode(page, "access-from-server")
+  await page.addInitScript(() => {
+    let requests = 0
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: (
+          success: PositionCallback,
+          error: PositionErrorCallback
+        ) => {
+          requests += 1
+          if (requests === 1) {
+            error({ code: 1 } as GeolocationPositionError)
+          } else {
+            success({
+              coords: { latitude: 37.5665, longitude: 126.978 },
+            } as GeolocationPosition)
+          }
+        },
+      },
+    })
+  })
+
+  const nearbyRequests: string[] = []
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/places") {
+      nearbyRequests.push(request.url())
+    }
+  })
+
+  await page.goto("/")
+  await expect(page.getByRole("dialog", { name: "위치 권한 필요" })).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "위치 권한 다시 요청하기" })
+  ).toBeVisible()
+  expect(nearbyRequests).toEqual([])
+  await page.getByRole("button", { name: "위치 권한 다시 요청하기" }).click()
+  await expect(page.getByRole("dialog", { name: "위치 권한 필요" })).toHaveCount(0)
 })
 
 test("shows the backend login message when Kakao login is rejected", async ({
