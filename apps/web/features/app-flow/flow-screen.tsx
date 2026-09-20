@@ -1201,10 +1201,10 @@ function FlowScreen({
           <Image
             src={homeDogImage}
             alt="여행을 준비하는 반려견"
-            width={180}
-            height={200}
+            width={206}
+            height={260}
             priority
-            className="pointer-events-none absolute right-0 top-6 h-[200px] w-[180px] object-contain object-bottom"
+            className="pointer-events-none absolute left-[187px] top-[46px] h-[260px] w-[206px] object-fill object-bottom"
           />
           <div className="absolute left-5 top-[75px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
