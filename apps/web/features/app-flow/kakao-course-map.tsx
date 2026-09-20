@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 
+import { Icon } from "@workspace/ui/components/icon"
 import { cn } from "@workspace/ui/lib/utils"
 
 type Coordinates = { lat: number; lng: number }
@@ -322,6 +323,8 @@ export function KakaoLocationPicker({
   const [searchState, setSearchState] = useState<
     "idle" | "loading" | "empty" | "error"
   >("idle")
+  const [locating, setLocating] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
   const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY
   const { maps, loadError, retry } = useKakaoMaps(appKey)
 
@@ -423,6 +426,40 @@ export function KakaoLocationPicker({
     onSelectRef.current(coordinates, place.place_name)
   }
 
+  function moveToCurrentLocation() {
+    if (!maps) return
+    if (!navigator.geolocation) {
+      setLocationError("이 브라우저에서는 현재 위치를 확인할 수 없어요.")
+      return
+    }
+
+    setLocating(true)
+    setLocationError(null)
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const coordinates = { lat: coords.latitude, lng: coords.longitude }
+        const position = new maps.LatLng(coordinates.lat, coordinates.lng)
+        mapRef.current?.setCenter(position)
+        markerRef.current?.setPosition(position)
+        searchRequestRef.current += 1
+        setResults([])
+        setSearchState("idle")
+        setQuery("")
+        setLocating(false)
+        onSelectRef.current(coordinates, "현재 위치")
+      },
+      (error) => {
+        setLocating(false)
+        setLocationError(
+          error.code === 1
+            ? "위치 권한을 허용하면 현재 위치로 이동할 수 있어요."
+            : "현재 위치를 확인하지 못했어요. 다시 시도해 주세요."
+        )
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 }
+    )
+  }
+
   if (!appKey) {
     return (
       <section
@@ -452,6 +489,7 @@ export function KakaoLocationPicker({
         >
           <input
             type="search"
+            data-ui="map-search"
             aria-label="출발 장소 검색"
             placeholder="장소를 검색해 주세요"
             value={query}
@@ -503,6 +541,26 @@ export function KakaoLocationPicker({
           </p>
         ) : null}
       </div>
+      {!loadError && maps ? (
+        <button
+          type="button"
+          aria-label="내 위치로 이동"
+          title="내 위치로 이동"
+          disabled={locating}
+          className="absolute right-3 bottom-16 z-10 flex size-11 items-center justify-center rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.18)] disabled:opacity-60"
+          onClick={moveToCurrentLocation}
+        >
+          <Icon name="currentLocation" className="size-6" />
+        </button>
+      ) : null}
+      {locationError ? (
+        <p
+          role="status"
+          className="type-body-r-14 absolute right-3 bottom-29 left-3 z-10 rounded-lg bg-white px-4 py-3 text-center text-gray-600 shadow-sm"
+        >
+          {locationError}
+        </p>
+      ) : null}
       {!loadError && maps ? (
         <p className="type-body-r-14 pointer-events-none absolute right-3 bottom-3 left-3 rounded-lg bg-white/95 px-4 py-3 text-center text-gray-600 shadow-sm">
           {selectedLabel || "지도에서 출발 위치를 누르거나 장소를 검색해 주세요."}

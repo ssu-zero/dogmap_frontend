@@ -189,6 +189,12 @@ input[data-ui="text-field"]:focus-visible {
   outline-offset: 0;
 }
 
+/* The map search field is framed by its white search card. */
+input[data-ui="map-search"]:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
+
 ::selection {
   background: var(--color-red-100);
   color: var(--color-gray-900);

@@ -1484,6 +1484,7 @@ function FlowScreen({
               onSelectLocation={(nextCoordinates, label) => {
                 setPendingStartCoordinates(nextCoordinates)
                 setPendingStartLocation(label)
+                if (label === "현재 위치") updateCoordinates(nextCoordinates)
               }}
               className="h-full min-h-80 rounded-xl"
             />
