@@ -8,7 +8,6 @@ import {
   nearbyCoursesParamsSchema,
   nearbyCoursesSchema,
   type CourseCreateRequest,
-  type Course,
   type CoursePlacesReplaceRequest,
   type NearbyCoursesParams,
 } from "@/schema/course"

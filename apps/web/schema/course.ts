@@ -1,5 +1,14 @@
 import { z } from "zod"
 
+// The backend stores course dates in a timezone-naive DB column and returns
+// them as local Korean wall-clock times. Restore the KST offset before the UI
+// parses them so a visitor's own timezone cannot shift the schedule.
+const backendDateTimeSchema = z.iso
+  .datetime({ offset: true, local: true })
+  .transform((value) =>
+    /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}+09:00`
+  )
+
 export const courseCategorySchema = z.enum(["FOOD", "CAFE", "WALK", "ACTIVITY"])
 export const placeCategorySchema = z.enum([
   "PARK",
@@ -35,7 +44,7 @@ export const coursePlaceSchema = z.object({
   stay_minutes: z.number().int().nullable(),
   travel_minutes: z.number().int().nullable(),
   travel_distance_meters: z.number().int().nullable(),
-  visit_time: z.string().datetime({ offset: true }).nullable().optional(),
+  visit_time: backendDateTimeSchema.nullable().optional(),
 })
 
 export const courseSchema = z.object({
@@ -43,7 +52,7 @@ export const courseSchema = z.object({
   title: z.string(),
   start_lat: z.number(),
   start_lng: z.number(),
-  walk_date: z.string().datetime({ offset: true }).nullable(),
+  walk_date: backendDateTimeSchema.nullable(),
   total_distance_meters: z.number(),
   total_duration_minutes: z.number(),
   path: z.array(z.tuple([z.number(), z.number()])),
