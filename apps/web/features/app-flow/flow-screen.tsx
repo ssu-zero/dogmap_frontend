@@ -15,6 +15,7 @@ import {
   CourseCard,
   CourseListItem,
   ListRow,
+  TimelineSpot,
 } from "@workspace/ui/components/list"
 import { Loading, LoadingSteps } from "@workspace/ui/components/loading"
 import { ChoiceButton } from "@workspace/ui/components/selection"
@@ -217,6 +218,12 @@ function FlowScreen({
   const [saved, setSaved] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<string | null>(null)
+  const [courseEditing, setCourseEditing] = useState(false)
+  const [pendingSpotRemoval, setPendingSpotRemoval] = useState<string | null>(null)
+  const [removedSpotToast, setRemovedSpotToast] = useState(false)
+  const [removedCourseSpots, setRemovedCourseSpots] = useState<
+    Record<string, string[]>
+  >({})
   const [name, setName] = useState(user.name)
   const [age, setAge] = useState(user.age)
   const [dogName, setDogName] = useState(user.dogName)
@@ -436,6 +443,12 @@ function FlowScreen({
     screen,
     user.id,
   ])
+
+  useEffect(() => {
+    if (!removedSpotToast) return
+    const timeout = window.setTimeout(() => setRemovedSpotToast(false), 2_000)
+    return () => window.clearTimeout(timeout)
+  }, [removedSpotToast])
 
   if (screen === "login") {
     return (
@@ -1331,6 +1344,250 @@ function FlowScreen({
       </Plain>
     )
 
+  if (screen === "course-detail" && ownCourse && course) {
+    const visiblePlaces = course.places.filter(
+      (place) => !removedCourseSpots[course.id]?.includes(place)
+    )
+    const dateLabel = course.date
+      ? new Intl.DateTimeFormat("ko-KR", {
+          month: "long",
+          day: "numeric",
+          weekday: "short",
+        }).format(new Date(`${course.date}T00:00:00`))
+      : "오늘의 추천 코스"
+
+    const removeSpot = () => {
+      if (!pendingSpotRemoval) return
+      setRemovedCourseSpots((previous) => ({
+        ...previous,
+        [course.id]: [...(previous[course.id] ?? []), pendingSpotRemoval],
+      }))
+      setPendingSpotRemoval(null)
+      setRemovedSpotToast(true)
+    }
+
+    if (!courseEditing) {
+      return (
+        <Plain>
+          <section className="min-h-[inherit] bg-gray-900 text-gray-50">
+            <div className="relative h-84 overflow-hidden">
+              <KakaoCourseMap
+                className="size-full"
+                center={course.startCoordinates ?? fallbackCoordinates}
+                path={course.path}
+                places={course.places}
+                onSelectPlace={setSelectedPlace}
+              />
+              <Header
+                className="absolute inset-x-0 top-0 bg-gradient-to-b from-gray-900/70 to-transparent [&_img]:invert"
+                title={undefined}
+                onBack={() => router.back()}
+              />
+              <Button
+                variant="dark"
+                size="sm"
+                className="absolute right-5 bottom-5 bg-gray-500 px-3 text-gray-50 hover:bg-gray-500"
+                onClick={() => setCourseEditing(true)}
+              >
+                코스 수정하기
+              </Button>
+            </div>
+            <section className="relative -mt-28 min-h-[calc(100svh-14rem)] space-y-5 rounded-t-2xl bg-gray-900 px-5 py-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h1 className="type-head-sb-24 text-gray-50">
+                      {course.title}
+                    </h1>
+                    <Chip variant="dark">예정</Chip>
+                  </div>
+                  <p className="type-body-r-14 text-gray-500">{dateLabel}</p>
+                </div>
+                <Button
+                  aria-label="코스 수정"
+                  variant="text"
+                  size="sm"
+                  className="size-6 p-0 text-gray-50 hover:bg-transparent"
+                  onClick={() => setCourseEditing(true)}
+                >
+                  <Icon name="more" className="size-6 invert" />
+                </Button>
+              </div>
+              <section aria-label="코스 스팟" className="space-y-0">
+                {visiblePlaces.map((place, index) => (
+                  <TimelineSpot
+                    key={`${course.id}-${place}`}
+                    title={place}
+                    time={formatCourseSpotTime(course.startTime, index)}
+                    chip={index % 2 ? "카페" : "식당"}
+                    variant="dark-course"
+                    review="제로와 함께 방문했던 곳이에요."
+                  />
+                ))}
+              </section>
+              {selectedPlace ? (
+                <section
+                  className="rounded-2xl bg-gray-800 p-4"
+                  role="dialog"
+                  aria-label="스팟 상세"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="type-body-sb-16 text-gray-50">
+                        {selectedPlace}
+                      </p>
+                      <p className="type-body-r-14 mt-1 text-gray-400">
+                        반려견과 함께 방문하기 좋은 코스 스팟이에요.
+                      </p>
+                    </div>
+                    <Button
+                      variant="text"
+                      size="sm"
+                      className="text-gray-50 hover:bg-gray-700"
+                      onClick={() => setSelectedPlace(null)}
+                    >
+                      닫기
+                    </Button>
+                  </div>
+                </section>
+              ) : null}
+            </section>
+          </section>
+        </Plain>
+      )
+    }
+
+    return (
+      <Plain>
+        <section className="relative flex min-h-[inherit] flex-col bg-gray-900 text-gray-50">
+          <Header
+            className="shrink-0 bg-gray-900 text-gray-50 [&_img]:invert"
+            title={undefined}
+            onBack={() => router.back()}
+          />
+          <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-28 pt-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-4">
+                <h1 className="type-head-sb-24 py-1 text-gray-50">
+                  {course.title}
+                </h1>
+                <Button
+                  aria-label="코스 수정"
+                  variant="text"
+                  size="sm"
+                  className="size-6 p-0 text-gray-50 hover:bg-transparent"
+                  onClick={() => setCourseEditing((value) => !value)}
+                >
+                  <Icon name="edit" className="size-6 invert" />
+                </Button>
+              </div>
+              <p className="type-body-r-14 text-gray-500">{dateLabel}</p>
+            </div>
+
+            {visiblePlaces.length ? (
+              <section aria-label="코스 스팟" className="space-y-0">
+                {visiblePlaces.map((place, index) => (
+                  <TimelineSpot
+                    key={`${course.id}-${place}`}
+                    title={place}
+                    time={formatCourseSpotTime(course.startTime, index)}
+                    chip={index % 2 ? "카페" : "식당"}
+                    variant={courseEditing ? "dark-edit" : "dark-default"}
+                    review={courseEditing ? undefined : "내가 방문한 적이 있어요!"}
+                    onRemove={
+                      courseEditing
+                        ? () => setPendingSpotRemoval(place)
+                        : undefined
+                    }
+                  />
+                ))}
+              </section>
+            ) : (
+              <div className="rounded-2xl border border-gray-600 bg-gray-800 px-5 py-6">
+                <p className="type-body-sb-16 text-gray-150">
+                  남아 있는 스팟이 없어요
+                </p>
+                <p className="type-body-r-14 mt-1 text-gray-400">
+                  새 코스를 만들어 제로와 다시 떠나 보세요.
+                </p>
+              </div>
+            )}
+          </main>
+
+          <div className="absolute inset-x-0 bottom-0 bg-gray-900 px-5 pb-6 pt-3">
+            <Button
+              size="full"
+              variant="secondary"
+              className="border-0 bg-gray-50 text-gray-900 hover:bg-white"
+              onClick={() => setCourseEditing((value) => !value)}
+            >
+              {courseEditing ? "수정 완료" : "수정하기"}
+            </Button>
+          </div>
+
+          {removedSpotToast ? (
+            <p
+              className="type-body-r-16 absolute inset-x-0 bottom-24 mx-auto w-fit rounded-full bg-gray-600 px-4 py-2 text-gray-50"
+              role="status"
+            >
+              스팟이 삭제되었습니다
+            </p>
+          ) : null}
+
+          {pendingSpotRemoval ? (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 px-5"
+              role="dialog"
+              aria-modal="true"
+              aria-label="스팟 삭제 확인"
+            >
+              <section className="w-full rounded-2xl bg-gray-800 shadow-[0_0_1px_var(--color-gray-400)]">
+                <div className="space-y-3 px-4 py-5 text-center">
+                  <div>
+                    <h2 className="type-head-sb-24 text-gray-50">
+                      스팟을 삭제할까요?
+                    </h2>
+                    <p className="type-body-r-16 mt-1 text-gray-400">
+                      스팟을 삭제하면 삭제된 코스로 재조정돼요!
+                    </p>
+                  </div>
+                  <div className="rounded-[20px] border border-gray-400 bg-gray-600 px-5 py-3 text-left">
+                    <div className="flex items-center gap-2">
+                      <p className="type-body-sb-16 text-gray-150">
+                        {pendingSpotRemoval}
+                      </p>
+                      <Chip variant="dark">스팟</Chip>
+                    </div>
+                    <p className="type-body-r-13 mt-2 text-gray-400">
+                      현재 코스에서 방문 예정
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 p-4 pt-0">
+                  <Button
+                    size="lg"
+                    variant="dark"
+                    className="h-13 w-full bg-gray-600 px-4 hover:bg-gray-600"
+                    onClick={() => setPendingSpotRemoval(null)}
+                  >
+                    유지하기
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="h-13 w-full bg-red-500 px-4 hover:bg-red-500"
+                    onClick={removeSpot}
+                  >
+                    삭제하기
+                  </Button>
+                </div>
+              </section>
+            </div>
+          ) : null}
+        </section>
+      </Plain>
+    )
+  }
+
   if (
     screen === "course-detail" ||
     screen === "community-detail" ||
@@ -1953,6 +2210,18 @@ function dedupeNearbyPlaces<T extends { content_id: string }>(places: T[]) {
 
 function findHomeArea(address?: string) {
   return address?.split(/\s+/).find((part) => part.endsWith("구")) ?? "내 주변"
+}
+
+function formatCourseSpotTime(startTime: string | undefined, index: number) {
+  const [rawHour, rawMinute] = (startTime ?? "10:00")
+    .split(":")
+    .map(Number)
+  const totalMinutes = (rawHour * 60 || 600) + (rawMinute || 0) + index * 60
+  const hour = Math.floor(totalMinutes / 60) % 24
+  const minute = totalMinutes % 60
+  const period = hour < 12 ? "오전" : "오후"
+  const displayHour = hour % 12 || 12
+  return `${period} ${displayHour} : ${String(minute).padStart(2, "0")}`
 }
 
 function normalizePlaceImage(imageUrl: string | null) {

@@ -255,11 +255,13 @@ type TimelineSpotProps = {
   chip?: string
   variant?:
     | "dark-default"
+    | "dark-course"
     | "dark-empty"
     | "dark-edit"
     | "light-default"
     | "light-empty"
   review?: string
+  onRemove?: () => void
   className?: string
 }
 function TimelineSpot({
@@ -268,9 +270,11 @@ function TimelineSpot({
   chip = "반려견 동반",
   variant = "light-default",
   review,
+  onRemove,
   className,
 }: TimelineSpotProps) {
   const dark = variant.startsWith("dark")
+  const course = variant === "dark-course"
   const empty = variant.endsWith("empty")
   const edit = variant === "dark-edit"
   const surface = dark
@@ -283,13 +287,15 @@ function TimelineSpot({
         <span
           className={cn(
             "mt-1.5 size-3 rounded-full border-2",
-            dark ? "border-gray-400 bg-gray-200" : "border-red-300 bg-red-600"
+            dark && !course
+              ? "border-gray-400 bg-gray-200"
+              : "border-red-300 bg-red-600"
           )}
         />
         <span
           className={cn(
             "min-h-17 flex-1 border-l",
-            dark ? "border-gray-500" : "border-red-400"
+            dark && !course ? "border-gray-500" : "border-red-400"
           )}
         />
       </div>
@@ -330,12 +336,16 @@ function TimelineSpot({
               type="button"
               aria-label="스팟 제거"
               className="flex size-11 items-center justify-center rounded-lg border border-gray-50 bg-gray-700"
+              onClick={onRemove}
             >
               <Icon name="close" className="size-6" />
             </button>
           ) : null}
           {!edit && !empty ? (
-            <Icon name="arrowRight" className="size-6" />
+            <Icon
+              name="arrowRight"
+              className={cn("size-6", dark && "invert opacity-50")}
+            />
           ) : null}
         </div>
         {dark && !empty && review ? (
