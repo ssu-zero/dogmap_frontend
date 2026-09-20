@@ -131,6 +131,7 @@ type Screen =
   | "error"
 
 type CoursePickerField = "date" | "startTime" | "endTime"
+type HomeLocationError = "denied" | "unavailable" | "timeout" | "unsupported"
 
 const homePlaceCategories = ["식당", "산책", "카페", "액티비티"] as const
 
@@ -154,7 +155,8 @@ function AppEntry() {
       window.removeEventListener("dogmap:auth-changed", syncAuthState)
   }, [])
 
-  return <FlowScreen screen={demoMode || hasAccessToken ? "home" : "login"} />
+  const entryScreen = demoMode || hasAccessToken ? "home" : "login"
+  return <FlowScreen key={entryScreen} screen={entryScreen} />
 }
 
 function FlowScreen({
@@ -178,9 +180,7 @@ function FlowScreen({
     coordinates,
     courseStartCoordinates,
     courseDraft,
-    dismissLocationPermissionPrompt,
     completeOnboarding,
-    locationPermissionPromptOpen,
     onboarding,
     saveCourse,
     communityLikes,
@@ -214,10 +214,11 @@ function FlowScreen({
     )
   const [generationRevealing, setGenerationRevealing] = useState(false)
   const dogHydrated = useRef(false)
-  const homeLocationPromptShown = useRef(false)
+  const homeLocationRequestStarted = useRef(false)
   const [hasAccessToken, setHasAccessToken] = useState(false)
-  const [homeLocationResolved, setHomeLocationResolved] = useState(demoMode)
-  const [homeLocationUnavailable, setHomeLocationUnavailable] = useState(false)
+  const [homeLocationResolved, setHomeLocationResolved] = useState(false)
+  const [homeLocationError, setHomeLocationError] =
+    useState<HomeLocationError | null>(null)
   const [authConfigurationError, setAuthConfigurationError] = useState(false)
   const [generationError, setGenerationError] = useState<string | null>(null)
   const [generationNoCandidates, setGenerationNoCandidates] = useState(false)
@@ -340,7 +341,7 @@ function FlowScreen({
     !demoMode &&
     screen === "home" &&
     homeLocationResolved &&
-    !homeLocationUnavailable
+    !homeLocationError
   const nearbyPlaces = useQuery({
     ...nearbyPlacesQueryOptions({
       lat: coordinates.lat,
@@ -363,11 +364,6 @@ function FlowScreen({
       enabled: shouldLoadHomePlaces && homeCategory === "전체",
     })),
   })
-
-  useEffect(() => {
-    if (screen !== "home" || demoMode || !locationPermissionPromptOpen) return
-    homeLocationPromptShown.current = true
-  }, [demoMode, locationPermissionPromptOpen, screen])
 
   useEffect(() => {
     if (screen !== "new-course" || courseDraft.startLocation) return
@@ -393,15 +389,14 @@ function FlowScreen({
       screen !== "home" ||
       demoMode ||
       !hasAccessToken ||
-      locationPermissionPromptOpen ||
-      homeLocationPromptShown.current ||
-      homeLocationResolved
+      homeLocationRequestStarted.current
     ) {
       return
     }
 
+    homeLocationRequestStarted.current = true
     if (!("geolocation" in navigator)) {
-      setHomeLocationUnavailable(true)
+      setHomeLocationError("unsupported")
       setHomeLocationResolved(true)
       return
     }
@@ -409,11 +404,17 @@ function FlowScreen({
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         updateCoordinates({ lat: coords.latitude, lng: coords.longitude })
-        setHomeLocationUnavailable(false)
+        setHomeLocationError(null)
         setHomeLocationResolved(true)
       },
-      () => {
-        setHomeLocationUnavailable(true)
+      (error) => {
+        setHomeLocationError(
+          error.code === 1
+            ? "denied"
+            : error.code === 3
+              ? "timeout"
+              : "unavailable"
+        )
         setHomeLocationResolved(true)
       },
       { enableHighAccuracy: true, timeout: 10_000, maximumAge: 300_000 }
@@ -421,8 +422,8 @@ function FlowScreen({
   }, [
     demoMode,
     hasAccessToken,
+    homeLocationError,
     homeLocationResolved,
-    locationPermissionPromptOpen,
     screen,
     updateCoordinates,
   ])
@@ -1299,9 +1300,9 @@ function FlowScreen({
               homePlacePreviews.map((place) => (
                 <HomePlaceCard key={place.id} {...place} />
               ))
-            ) : homeLocationUnavailable ? (
+            ) : homeLocationError ? (
               <p className="type-body-r-14 text-gray-400">
-                현재 위치를 허용하면 주변 동반 가능시설을 알려드려요.
+                주변 장소를 보려면 위치 권한이 필요해요.
               </p>
             ) : homePlacesPending ? (
               <div role="status" aria-label="주변 장소를 불러오는 중" className="space-y-3">
@@ -1335,57 +1336,52 @@ function FlowScreen({
             )}
           </div>
         </section>
-        {locationPermissionPromptOpen ? (
+        {!demoMode &&
+        hasAccessToken &&
+        (!homeLocationResolved || homeLocationError) ? (
           <div
-            className="layout-mobile-overlay z-10 flex items-center justify-center bg-black/40 px-8"
+            className="layout-mobile-overlay z-40 flex items-center justify-center bg-white px-6"
             role="dialog"
             aria-modal="true"
-            aria-label="위치 정보 권한"
+            aria-label="위치 권한 필요"
           >
-            <section className="w-full max-w-62.5 rounded-xl bg-white p-6 text-center shadow-lg">
-              <p className="type-head-sb-18">
-                위치 정보 권한 허용을 위해
-                <br />
-                설정으로 이동합니다
+            <section className="flex w-full flex-col items-center text-center">
+              <Icon name="location" className="size-12 text-red-600" />
+              <h2 className="type-head-sb-24 mt-6 text-gray-900">
+                위치 권한이 필요해요
+              </h2>
+              <p className="type-body-r-16 mt-3 break-keep text-gray-500">
+                현재 위치를 허용하면 주변 동반 가능시설을 알려드려요.
               </p>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <Button
-                  variant="dark"
-                  onClick={() => {
-                    setHomeLocationUnavailable(true)
-                    setHomeLocationResolved(true)
-                    dismissLocationPermissionPrompt()
-                  }}
-                >
-                  아니요
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    if (!("geolocation" in navigator)) {
-                      setHomeLocationUnavailable(true)
-                      setHomeLocationResolved(true)
-                      dismissLocationPermissionPrompt()
-                      return
-                    }
-                    navigator.geolocation.getCurrentPosition(({ coords }) => {
-                      updateCoordinates({
-                        lat: coords.latitude,
-                        lng: coords.longitude,
-                      })
-                      setHomeLocationUnavailable(false)
-                      setHomeLocationResolved(true)
-                      dismissLocationPermissionPrompt()
-                    }, () => {
-                      setHomeLocationUnavailable(true)
-                      setHomeLocationResolved(true)
-                      dismissLocationPermissionPrompt()
-                    })
-                  }}
-                >
-                  설정
-                </Button>
-              </div>
+              {homeLocationError ? (
+                <>
+                  {homeLocationError === "denied" ? (
+                    <p className="type-body-r-14 mt-3 break-keep text-gray-400">
+                      이미 차단했다면 브라우저의 사이트 설정에서 위치를 허용해 주세요.
+                    </p>
+                  ) : homeLocationError === "unsupported" ? (
+                    <p className="type-body-r-14 mt-3 break-keep text-gray-400">
+                      이 브라우저는 현재 위치를 지원하지 않아요. 위치 서비스를
+                      지원하는 브라우저에서 열어 주세요.
+                    </p>
+                  ) : null}
+                  <Button
+                    size="full"
+                    className="mt-8"
+                    onClick={() => {
+                      homeLocationRequestStarted.current = false
+                      setHomeLocationError(null)
+                      setHomeLocationResolved(false)
+                    }}
+                  >
+                    위치 권한 다시 요청하기
+                  </Button>
+                </>
+              ) : (
+                <p role="status" className="type-body-r-14 mt-8 text-gray-400">
+                  브라우저의 위치 권한 요청에서 허용을 선택해 주세요.
+                </p>
+              )}
             </section>
           </div>
         ) : null}

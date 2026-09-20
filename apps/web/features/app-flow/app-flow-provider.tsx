@@ -26,7 +26,6 @@ type AppFlowState = {
   terms: TermsAgreement
   termsAgreed: boolean
   onboarding: OnboardingProfile
-  locationPermissionPromptOpen: boolean
   courseDraft: CourseDraft
   coordinates: { lat: number; lng: number }
   courseStartCoordinates: { lat: number; lng: number } | null
@@ -44,7 +43,6 @@ type AppFlowState = {
   setAllTerms: (value: boolean) => void
   updateOnboarding: (updates: Partial<OnboardingProfile>) => void
   completeOnboarding: () => void
-  dismissLocationPermissionPrompt: () => void
   updateCoordinates: (coordinates: { lat: number; lng: number }) => void
   updateCourseStartCoordinates: (coordinates: { lat: number; lng: number } | null) => void
   updateCourseDraft: (updates: Partial<CourseDraft>) => void
@@ -62,8 +60,6 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
     location: false,
   })
   const [onboarding, setOnboarding] = useState(initialOnboardingProfile)
-  const [locationPermissionPromptOpen, setLocationPermissionPromptOpen] =
-    useState(false)
   const [courseDraft, setCourseDraft] = useState(initialCourseDraft)
   const [coordinates, setCoordinates] = useState({
     lat: 35.9402,
@@ -86,7 +82,6 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       terms,
       termsAgreed: Object.values(terms).every(Boolean),
       onboarding,
-      locationPermissionPromptOpen,
       courseDraft,
       coordinates,
       courseStartCoordinates,
@@ -183,10 +178,7 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
           ...previous,
           dogName: onboarding.dogName.trim(),
         }))
-        setLocationPermissionPromptOpen(true)
       },
-      dismissLocationPermissionPrompt: () =>
-        setLocationPermissionPromptOpen(false),
       updateCoordinates: setCoordinates,
       updateCourseStartCoordinates: setCourseStartCoordinates,
       updateCourseDraft: (updates) =>
@@ -202,7 +194,6 @@ function AppFlowProvider({ children }: { children: ReactNode }) {
       communityLikes,
       removedCommunityCourseIds,
       courses,
-      locationPermissionPromptOpen,
       onboarding,
       terms,
       user,
