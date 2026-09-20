@@ -946,7 +946,7 @@ function FlowScreen({
             width={493}
             height={92}
             priority
-            className="pointer-events-none absolute left-0 top-[50px] h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
+            className="pointer-events-none absolute left-[-44px] top-[-12px] h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
           />
           <Image
             src="/logo/home-with-paw.svg"
@@ -954,7 +954,7 @@ function FlowScreen({
             width={124}
             height={30}
             priority
-            className="absolute left-7 top-[70px] h-[30px] w-[124px]"
+            className="absolute left-7 top-2 h-[30px] w-[124px]"
           />
           <Image
             src="/img/home-dog.png"
@@ -962,9 +962,9 @@ function FlowScreen({
             width={206}
             height={260}
             priority
-            className="pointer-events-none absolute left-1/2 top-[108px] h-[260px] w-[206px] -translate-x-1/2 object-cover"
+            className="pointer-events-none absolute right-0 top-[46px] h-[260px] w-[206px] object-cover"
           />
-          <div className="absolute left-5 top-[137px] flex flex-col items-start gap-6">
+          <div className="absolute left-5 top-[75px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
               오늘 <span className="text-red-600">{user.dogName}</span>랑
               <br />
