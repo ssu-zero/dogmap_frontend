@@ -940,14 +940,16 @@ function FlowScreen({
     return (
       <AppShell tab="home">
         <section className="relative h-[286px] shrink-0 overflow-hidden bg-gray-900 text-white">
-          <Image
-            src="/img/home-wave.svg"
-            alt=""
-            width={493}
-            height={92}
-            priority
-            className="pointer-events-none absolute left-[-44px] top-[-12px] h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
-          />
+          <div className="pointer-events-none absolute left-0 top-[-12px] flex h-[214px] w-[500px] items-center justify-center overflow-hidden">
+            <Image
+              src="/img/home-wave.svg"
+              alt=""
+              width={493}
+              height={92}
+              priority
+              className="h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
+            />
+          </div>
           <Image
             src="/logo/home-with-paw.svg"
             alt="개동여지도"
@@ -962,7 +964,7 @@ function FlowScreen({
             width={206}
             height={260}
             priority
-            className="pointer-events-none absolute right-0 top-[46px] h-[260px] w-[206px] object-cover"
+            className="pointer-events-none absolute left-[187px] top-[46px] h-[260px] w-[206px] object-cover"
           />
           <div className="absolute left-5 top-[75px] flex flex-col items-start gap-6">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
@@ -1012,13 +1014,13 @@ function FlowScreen({
               ))}
             </div>
           </div>
-          <div className="mt-5 space-y-3">
+          <div className="space-y-3">
             {demoMode ? (
               homePlacePreviews.map((place) => (
                 <HomePlaceCard key={place.id} {...place} />
               ))
             ) : homePlaces.length ? (
-              homePlaces.slice(0, 2).map((place) => (
+              homePlaces.slice(0, 3).map((place) => (
                 <HomePlaceCard
                   key={place.content_id}
                   title={place.title}
