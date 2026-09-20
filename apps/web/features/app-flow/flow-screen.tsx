@@ -346,7 +346,7 @@ function FlowScreen({
   if (screen === "login") {
     return (
       <Plain>
-        <section className="relative flex min-h-[inherit] flex-col overflow-hidden bg-red-600 px-5 pt-40 pb-24">
+        <section className="relative flex min-h-svh flex-col bg-red-600 px-5 pb-6 pt-40">
           <div className="flex flex-col items-center text-center">
             <p className="type-body-r-16 text-gray-50">반려동물 맞춤 산책코스</p>
             <Image
@@ -365,7 +365,7 @@ function FlowScreen({
             height={157}
             priority
             unoptimized
-            className="pointer-events-none absolute right-9 bottom-26 h-[157px] w-[136px] object-contain"
+            className="pointer-events-none absolute right-9 bottom-8 h-[157px] w-[136px] object-contain"
           />
           <div className="relative z-10 mt-auto space-y-2">
             <Button
