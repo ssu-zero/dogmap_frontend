@@ -67,6 +67,36 @@ export const currentUser = {
   age: "3살",
 }
 
+export const homePlacePreviews = [
+  {
+    id: "home-coffee-tree-1",
+    title: "커피나무 숭실대점",
+    category: "카페",
+    distance: "1.3km",
+    companionLabel: "소형견 동반",
+    pawCount: 6,
+    imageUrl: "/img/home-place.png",
+  },
+  {
+    id: "home-coffee-tree-2",
+    title: "커피나무 숭실대점",
+    category: "카페",
+    distance: "1.3km",
+    companionLabel: "소형견 동반",
+    pawCount: 6,
+    imageUrl: "/img/home-place.png",
+  },
+  {
+    id: "home-coffee-tree-3",
+    title: "커피나무 숭실대점",
+    category: "카페",
+    distance: "1.3km",
+    companionLabel: "소형견 동반",
+    pawCount: 6,
+    imageUrl: "/img/home-place.png",
+  },
+] as const
+
 export const requiredTermKeys = ["service", "privacy", "location"] as const
 export type RequiredTermKey = (typeof requiredTermKeys)[number]
 

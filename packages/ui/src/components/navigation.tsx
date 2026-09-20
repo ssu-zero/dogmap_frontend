@@ -14,12 +14,12 @@ const defaultNavigationItems: NavigationItem[] = [
   {
     value: "course",
     label: "코스",
-    icon: "locationLine",
-    activeIcon: "location",
+    icon: "pawFill",
+    activeIcon: "pawFill",
   },
   {
-    value: "archive",
-    label: "발자국",
+    value: "community",
+    label: "커뮤니티",
     icon: "chatLine",
     activeIcon: "chatFill",
   },
@@ -46,7 +46,7 @@ function BottomNavigation({
   return (
     <nav
       className={cn(
-        "flex h-20 border-t border-gray-100 bg-white px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+        "flex min-h-[70px] border-t border-gray-50 bg-white px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         className
       )}
       {...props}
@@ -59,14 +59,19 @@ function BottomNavigation({
             type="button"
             onClick={() => onValueChange?.(item.value)}
             className={cn(
-              "type-caption-r-10 flex flex-1 flex-col items-center justify-center gap-1",
-              active ? "text-gray-900" : "text-gray-200"
+              "flex flex-1 flex-col items-center justify-center gap-1",
+              active
+                ? "type-caption-sb-12 text-gray-900"
+                : "type-caption-r-12 text-gray-200"
             )}
             aria-current={active ? "page" : undefined}
           >
             <Icon
               name={active ? item.activeIcon : item.icon}
-              className="size-6"
+              className={cn(
+                "size-6",
+                !active && item.value === "course" && "opacity-[0.41]"
+              )}
             />
             {item.label}
           </button>

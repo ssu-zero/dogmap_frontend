@@ -20,8 +20,8 @@ const communityNavigationItems: NavigationItem[] = [
   {
     value: "course",
     label: "코스",
-    icon: "locationLine",
-    activeIcon: "location",
+    icon: "pawFill",
+    activeIcon: "pawFill",
   },
   {
     value: "community",

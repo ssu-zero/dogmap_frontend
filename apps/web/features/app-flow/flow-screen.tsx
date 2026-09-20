@@ -62,6 +62,7 @@ import {
   isDogInfoComplete,
   isDogNameValid,
   isCourseDraftComplete,
+  homePlacePreviews,
   requiredTermKeys,
   termsContent,
   toggleCourseTheme,
@@ -850,99 +851,95 @@ function FlowScreen({
   if (screen === "home")
     return (
       <AppShell tab="home">
-        <section className="relative overflow-hidden bg-gray-900 px-5 pb-8 pt-10 text-white">
+        <section className="relative h-[286px] shrink-0 overflow-hidden bg-gray-900 text-white">
           <Image
-            src="/logo/with_paw.png"
+            src="/img/home-wave.svg"
+            alt=""
+            width={493}
+            height={92}
+            priority
+            className="pointer-events-none absolute left-[-44px] top-[-12px] h-[92px] max-w-none w-[493px] rotate-[14.69deg] opacity-40"
+          />
+          <Image
+            src="/logo/home-with-paw.svg"
             alt="개동여지도"
             width={124}
             height={30}
             priority
-            className="h-[30px] w-[124px] brightness-0 invert"
+            className="absolute left-7 top-2 h-[30px] w-[124px]"
           />
           <Image
-            src="/img/dog.png"
+            src="/img/home-dog.png"
             alt="여행을 준비하는 반려견"
             width={206}
             height={260}
             priority
-            className="pointer-events-none absolute right-[-8px] top-14 h-[210px] w-auto object-contain"
+            className="pointer-events-none absolute left-1/2 top-[46px] h-[260px] w-[206px] -translate-x-1/2 object-cover"
           />
-          <div className="relative mt-11 space-y-6">
-            <h1 className="type-head-sb-24 whitespace-pre-line">
-              {`오늘 ${user.dogName}랑\n어디 놀러 갈까요?`}
+          <div className="absolute left-5 top-[51px] flex flex-col items-start gap-6">
+            <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.01em]">
+              오늘 <span className="text-red-600">{user.dogName}</span>랑
+              <br />
+              어디 놀러 갈까요?
             </h1>
             <Button
-              size="md"
-              className="rounded-xl px-10"
+              className="type-body-sb-16 h-10 rounded-xl px-10"
               onClick={() => router.push("/courses/new")}
             >
               코스 만들기
             </Button>
           </div>
         </section>
-        <section className="-mt-1 flex-1 rounded-t-2xl border-t-2 border-gray-200 bg-white px-5 py-5">
-          <div className="space-y-2">
+        <section className="relative z-10 flex min-h-0 flex-1 flex-col border-t-2 border-gray-200 bg-white px-5">
+          <div className="flex flex-col gap-2 py-5">
             <div className="flex items-center justify-between">
-              <h2 className="type-head-sb-20">동반 가능시설</h2>
-              <span className="type-body-r-14 text-gray-200">내 주변</span>
+              <h2 className="type-head-sb-20 text-gray-900">동반 가능시설</h2>
+              <span className="flex items-center gap-1 py-1 text-gray-200">
+                <Icon name="location" className="size-4 opacity-[0.41]" />
+                <span className="type-body-r-14">동작구</span>
+              </span>
             </div>
-            <p className="type-body-r-14 text-gray-400">
+            <p className="text-[14px] leading-5 font-medium tracking-[0.5px] text-gray-400">
               {user.dogName}와 함께 갈 수 있어요!
             </p>
-            <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="장소 카테고리">
+            <div
+              className="flex gap-2 overflow-x-auto"
+              role="group"
+              aria-label="장소 카테고리"
+            >
               {(["전체", "식당", "산책", "카페", "액티비티"] as const).map((category) => (
-                <Chip
+                <button
                   key={category}
-                  variant={homeCategory === category ? "selected" : "light"}
-                  className="shrink-0"
+                  type="button"
+                  className={`type-body-r-16 shrink-0 rounded-full px-3 py-1 transition-colors ${
+                    homeCategory === category
+                      ? "bg-gray-900 text-gray-50"
+                      : "bg-gray-50 text-gray-200"
+                  }`}
                   aria-pressed={homeCategory === category}
                   onClick={() => setHomeCategory(category)}
                 >
                   {category}
-                </Chip>
+                </button>
               ))}
             </div>
           </div>
           <div className="mt-5 space-y-3">
             {demoMode ? (
-              communityCourses.slice(0, 3).map((item) => (
-                <button
-                  className="w-full text-left"
-                  key={item.id}
-                  onClick={() => router.push(`/community/${item.id}`)}
-                >
-                  <CourseCard
-                    title={item.title}
-                    hours={item.duration / 60}
-                    spots={item.placeCount ?? item.places.length}
-                    variant="community-y"
-                  />
-                </button>
+              homePlacePreviews.map((place) => (
+                <HomePlaceCard key={place.id} {...place} />
               ))
             ) : nearbyPlaces.data?.length ? (
               nearbyPlaces.data.map((place) => (
-                <article
+                <HomePlaceCard
                   key={place.content_id}
-                  className="flex min-h-26 items-center justify-between rounded-2xl border border-gray-100 bg-gray-50/50 px-4 py-3"
-                >
-                  <div className="min-w-0 space-y-2">
-                    <h3 className="type-body-sb-16 truncate text-gray-600">{place.title}</h3>
-                    <p className="type-body-r-13 text-gray-400">
-                      {place.category} · {(place.dist / 1000).toFixed(1)}km
-                    </p>
-                    <p className="type-caption-r-12 text-red-700">반려견 동반 가능</p>
-                  </div>
-                  {place.image_url ? (
-                    <Image
-                      src={place.image_url}
-                      alt=""
-                      width={76}
-                      height={76}
-                      unoptimized
-                      className="size-19 shrink-0 rounded-xl object-cover"
-                    />
-                  ) : null}
-                </article>
+                  title={place.title}
+                  category={place.category}
+                  distance={`${(place.dist / 1000).toFixed(1)}km`}
+                  companionLabel={place.pet_accompany_type ?? "반려견 동반"}
+                  pawCount={Math.max(place.like_count, 0)}
+                  imageUrl={place.image_url ?? "/img/home-place.png"}
+                />
               ))
             ) : nearbyPlaces.isPending ? (
               <p className="type-body-r-14 text-gray-400">주변 장소를 불러오고 있어요.</p>
@@ -1834,6 +1831,52 @@ function FlowScreen({
 
 function Plain({ children }: { children: React.ReactNode }) {
   return <main className="layout-mobile bg-white">{children}</main>
+}
+
+function HomePlaceCard({
+  title,
+  category,
+  distance,
+  companionLabel,
+  pawCount,
+  imageUrl,
+}: {
+  title: string
+  category: string
+  distance: string
+  companionLabel: string
+  pawCount: number
+  imageUrl: string
+}) {
+  return (
+    <article className="flex min-h-[104px] items-center justify-between gap-3 rounded-[20px] border border-gray-100 bg-gray-50/50 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <h3 className="type-body-sb-16 truncate text-gray-600">{title}</h3>
+        <div className="mt-3 flex flex-col gap-1">
+          <div className="type-body-r-13 flex min-w-0 items-center gap-1 text-gray-200">
+            <span className="shrink-0 rounded-full bg-red-50 px-2 text-red-700">
+              {companionLabel}
+            </span>
+            <span className="truncate">{category}</span>
+            <span aria-hidden="true">·</span>
+            <span className="shrink-0">{distance}</span>
+          </div>
+          <p className="type-body-r-13 flex items-center gap-1 text-gray-200">
+            <Icon name="pawFill" className="size-5" />
+            {pawCount}마리의 친구들이 발자국을 남겼어요!
+          </p>
+        </div>
+      </div>
+      <Image
+        src={imageUrl}
+        alt=""
+        width={76}
+        height={76}
+        unoptimized
+        className="size-19 shrink-0 rounded-xl object-cover"
+      />
+    </article>
+  )
 }
 
 function TermRow({

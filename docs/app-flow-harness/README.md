@@ -10,6 +10,14 @@
 - 화면 조합: `flow-screen.tsx`
 - 페이지 계약: `pages/`
 
+주요 화면 계약:
+
+- `pages/auth.md`
+- `pages/home.md`
+- `pages/courses.md`
+- `pages/community.md`
+- `pages/profile-and-errors.md`
+
 기획안이나 Figma가 전달되면 먼저 해당 화면 계약을 갱신하고, 공통 UI는
 `packages/ui`에 추출한다. 이 폴더는 API 명세나 실제 서버 상태를 대체하지
 않으며, API가 있는 기능을 mock으로 우회해서는 안 된다.
