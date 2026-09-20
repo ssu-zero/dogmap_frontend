@@ -1286,13 +1286,13 @@ function FlowScreen({
                     </span>
                     <button
                       type="button"
-                      className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 shadow-[0_0_2px_var(--color-gray-100)]"
+                      className="inline-flex h-10 w-25 items-center justify-center rounded-xl bg-gray-50 px-4 whitespace-nowrap shadow-[0_0_2px_var(--color-gray-100)]"
                       onClick={() => {
                         setCoursePicker(field)
                         setCoursePickerValue(courseDraft[field] || "13:00")
                       }}
                     >
-                      <span className="type-body-r-14 text-gray-600">
+                      <span className="type-body-r-14 whitespace-nowrap text-gray-600">
                         {formatCourseTime(courseDraft[field])}
                       </span>
                     </button>
