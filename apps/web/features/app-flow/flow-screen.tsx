@@ -1210,7 +1210,7 @@ function FlowScreen({
         </section>
         {locationPermissionPromptOpen ? (
           <div
-            className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 px-8"
+            className="layout-mobile-overlay z-10 flex items-center justify-center bg-black/40 px-8"
             role="dialog"
             aria-modal="true"
             aria-label="위치 정보 권한"
