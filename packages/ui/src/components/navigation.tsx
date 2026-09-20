@@ -14,7 +14,7 @@ const defaultNavigationItems: NavigationItem[] = [
   {
     value: "course",
     label: "코스",
-    icon: "pawFill",
+    icon: "pawLine",
     activeIcon: "pawFill",
   },
   {

@@ -20,6 +20,7 @@ const iconSources = {
   locationLine: new URL("../svg/location_line.svg", import.meta.url).href,
   more: new URL("../svg/more.svg", import.meta.url).href,
   pawFill: new URL("../svg/paw_fill.svg", import.meta.url).href,
+  pawLine: new URL("../svg/paw_fill-1.svg", import.meta.url).href,
   plus: new URL("../svg/plus.svg", import.meta.url).href,
   profileFill: new URL("../svg/profile_fill.svg", import.meta.url).href,
   profileLine: new URL("../svg/profile_line.svg", import.meta.url).href,
