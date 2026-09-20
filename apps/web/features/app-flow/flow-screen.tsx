@@ -1948,7 +1948,7 @@ function FlowScreen({
             ) : null}
             {pendingCourseDeletion ? (
               <div
-                className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 px-5"
+                className="layout-mobile-overlay z-40 flex items-center justify-center bg-black/60 px-5"
                 role="dialog"
                 aria-modal="true"
                 aria-label="코스 삭제 확인"
@@ -2110,7 +2110,7 @@ function FlowScreen({
 
           {pendingSpotRemoval !== null ? (
             <div
-              className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 px-5"
+              className="layout-mobile-overlay z-10 flex items-center justify-center bg-black/60 px-5"
               role="dialog"
               aria-modal="true"
               aria-label="스팟 삭제 확인"
