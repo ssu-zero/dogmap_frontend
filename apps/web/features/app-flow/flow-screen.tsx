@@ -522,7 +522,12 @@ function FlowScreen({
           <div className="flex min-h-0 flex-1 flex-col px-5">
             <h1 className="type-head-sb-24 whitespace-pre-line tracking-[-0.023em] text-gray-800">
               {onboarding.dogName
-                ? `${onboarding.dogName} 반가워요!\n${onboarding.dogName}를 소개해주세요`
+                ? <>
+                    <span className="text-red-600">{onboarding.dogName}</span>
+                    {` 반가워요!\n`}
+                    <span className="text-red-600">{onboarding.dogName}</span>
+                    를 소개해주세요
+                  </>
                 : "반려견 반가워요!\n반려견을 소개해주세요"}
             </h1>
             <div className="-mx-1 mt-7">
