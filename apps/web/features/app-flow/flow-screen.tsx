@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Chip } from "@workspace/ui/components/chip"
 import { EmptyState } from "@workspace/ui/components/empty-state"
 import { Header } from "@workspace/ui/components/header"
+import { Icon } from "@workspace/ui/components/icon"
 import {
   CourseCard,
   CourseListItem,
@@ -580,13 +581,7 @@ function FlowScreen({
               aria-label="뒤로 가기"
               className="flex size-6 items-center justify-center"
             >
-              <Image
-                src="/icons/terms/arrow-left.svg"
-                alt=""
-                width={11}
-                height={19}
-                className="h-[19px] w-[11px]"
-              />
+              <Icon name="arrowLeft" className="size-6" />
             </button>
           </header>
           <div className="relative">
@@ -672,13 +667,7 @@ function FlowScreen({
               aria-label="뒤로 가기"
               className="flex size-6 items-center justify-center"
             >
-              <Image
-                src="/icons/terms/arrow-left.svg"
-                alt=""
-                width={11}
-                height={19}
-                className="h-[19px] w-[11px]"
-              />
+              <Icon name="arrowLeft" className="size-6" />
             </button>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-32">
